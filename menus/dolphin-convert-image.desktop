@@ -1,54 +1,51 @@
 [Desktop Entry]
 Type=Service
-MimeType=image/jpeg;image/png;image/webp;image/gif;image/bmp;image/tiff;image/avif;image/jxl;image/svg+xml;
-Actions=jpg;png;webp;pdf;ask;
+MimeType=image/jpeg;image/png;image/webp;image/gif;image/bmp;image/tiff;image/avif;image/jxl;image/svg+xml;image/vnd.microsoft.icon;
+Actions=jpg;png;webp;avif;jxl;_SEPARATOR_;pdf;pdf-one;_SEPARATOR_;ask;
 X-KDE-Priority=TopLevel
-X-KDE-Submenu=Convert
-X-KDE-Submenu[uk]=Конвертувати
-X-KDE-Submenu[de]=Konvertieren
-X-KDE-Submenu[es]=Convertir
-X-KDE-Submenu[fr]=Convertir
-X-KDE-Submenu[pl]=Konwertuj
+X-KDE-Submenu=Convert to…
+X-KDE-Submenu[uk]=Конвертувати в…
+X-KDE-Submenu[de]=Umwandeln in…
+X-KDE-Submenu[es]=Convertir a…
+X-KDE-Submenu[fr]=Convertir en…
+X-KDE-Submenu[pl]=Konwertuj na…
+X-KDE-Submenu[nl]=Converteren naar…
+X-KDE-Submenu[ca]=Converteix a…
 
 [Desktop Action jpg]
-Name=To JPG
-Name[uk]=У JPG
-Name[de]=In JPG
-Name[es]=A JPG
-Name[fr]=En JPG
-Name[pl]=Do JPG
-Icon=image-x-generic
+Name=JPG
 Exec=dolphin-convert image jpg %F
 
 [Desktop Action png]
-Name=To PNG
-Name[uk]=У PNG
-Name[de]=In PNG
-Name[es]=A PNG
-Name[fr]=En PNG
-Name[pl]=Do PNG
-Icon=image-x-generic
+Name=PNG
 Exec=dolphin-convert image png %F
 
 [Desktop Action webp]
-Name=To WebP
-Name[uk]=У WebP
-Name[de]=In WebP
-Name[es]=A WebP
-Name[fr]=En WebP
-Name[pl]=Do WebP
-Icon=image-x-generic
+Name=WebP
 Exec=dolphin-convert image webp %F
 
+[Desktop Action avif]
+Name=AVIF
+Exec=dolphin-convert image avif %F
+
+[Desktop Action jxl]
+Name=JXL
+Exec=dolphin-convert image jxl %F
+
 [Desktop Action pdf]
-Name=To PDF
-Name[uk]=У PDF
-Name[de]=In PDF
-Name[es]=A PDF
-Name[fr]=En PDF
-Name[pl]=Do PDF
-Icon=image-x-generic
+Name=PDF
 Exec=dolphin-convert image pdf %F
+
+[Desktop Action pdf-one]
+Name=PDF (one file)
+Name[uk]=PDF (один файл)
+Name[de]=PDF (eine Datei)
+Name[es]=PDF (un solo archivo)
+Name[fr]=PDF (un seul fichier)
+Name[pl]=PDF (jeden plik)
+Name[nl]=PDF (één bestand)
+Name[ca]=PDF (un sol fitxer)
+Exec=dolphin-convert image pdf-one %F
 
 [Desktop Action ask]
 Name=More options…
@@ -57,5 +54,6 @@ Name[de]=Weitere Optionen…
 Name[es]=Más opciones…
 Name[fr]=Plus d’options…
 Name[pl]=Więcej opcji…
-Icon=configure
+Name[nl]=Meer opties…
+Name[ca]=Més opcions…
 Exec=dolphin-convert image ask %F

@@ -27,4 +27,7 @@ tr=(
   ["Unknown duration"]="Невідома тривалість"
   ["File is too long for this size"]="Файл задовгий для такого розміру"
   ["Could not fit the target size"]="Не вдалося вмістити в заданий розмір"
+  ["one file"]="один файл"
+  ["Remove metadata"]="Видалити метадані"
+  ["Not installed"]="Не встановлено"
 )

@@ -27,4 +27,7 @@ tr=(
   ["Unknown duration"]="Durée inconnue"
   ["File is too long for this size"]="Fichier trop long pour cette taille"
   ["Could not fit the target size"]="Impossible d’atteindre la taille cible"
+  ["one file"]="un seul fichier"
+  ["Remove metadata"]="Supprimer les métadonnées"
+  ["Not installed"]="Non installé"
 )

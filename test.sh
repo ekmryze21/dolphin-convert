@@ -35,15 +35,34 @@ magick -size 80x80 xc:red xc:blue doc.pdf
 sha256sum -- "$v" my.dir/noext -dash.mkv відео.mkv .hidden s.wav ./i* p.avif doc.pdf >"$HOME/sums"
 
 base=${v%.mkv}
-for fmt in h264 h265 vp9 gif mp3 copy-mp4 copy-mkv; do go video $fmt "$v"; check "video $fmt" '(( rc == 0 ))'; done
-check "codecs" '[[ $(codec "$base.mp4" v) == h264 && $(codec "$base (1).mp4" v) == hevc && $(codec "$base.webm" v) == vp9 && $(codec "$base (2).mp4" v) == h264 ]]'
+for fmt in h264 h265 vp9 av1 gif mp3 copy-mp4 copy-mkv; do go video $fmt "$v"; check "video $fmt" '(( rc == 0 ))'; done
+check "codecs" '[[ $(codec "$base.mp4" v) == h264 && $(codec "$base (1).mp4" v) == hevc && $(codec "$base.webm" v) == vp9 && $(codec "$base (2).mp4" v) == av1 && $(codec "$base (3).mp4" v) == h264 ]]'
 check "even size" '[[ $(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 "$base.mp4") == 302,202* ]]'
 go video mp3 my.dir/noext ./-dash.mkv -dash.mkv відео.mkv .hidden
 check "awkward names" '[[ $rc == 0 && -s my.dir/noext.mp3 && -s ./-dash.mp3 && -s "./-dash (1).mp3" && -s відео.mp3 && -s .hidden.mp3 && ! -e my.mp3 ]]'
 check "open folder" '[[ $(<"$HOME/dolphin") == "--select $work/.hidden.mp3" ]]'
+check "notification name" 'grep -qx dolphin-convert "$HOME/notify"'
 check "per-file progress" 'grep -q "^# 5 of 5: .hidden" "$HOME/progress"'
 for fmt in mp3 m4a opus ogg flac wav; do go audio $fmt s.wav; check "audio $fmt" '(( rc == 0 ))'; done
-for fmt in jpg png webp tiff pdf; do go image $fmt ./i*.png p.avif; check "image $fmt" '[[ $rc == 0 && -s p.$fmt ]]'; done
+for fmt in jpg png webp avif jxl tiff gif bmp ico pdf; do go image $fmt ./i*.png p.avif; check "image $fmt" '[[ $rc == 0 && -s p.$fmt ]]'; done
+check "avif transparency" '[[ $(ffprobe -v error -show_entries stream=codec_name -of csv=p=0 "i [x]%d.avif" | grep -c av1) == 2 ]]'
+check "ico sizes" '[[ $(magick identify "i [x]%d.ico" | wc -l) == 5 ]]'
+mkdir merge; cp ./i*d.png merge/a.png; cp p.avif merge/b.avif
+go image pdf-one merge/a.png merge/b.avif
+check "one pdf" '[[ $rc == 0 && $(pdfinfo merge/a.pdf | grep -c "^Pages: *2$") == 1 && $(ls merge | wc -l) == 3 ]]'
+echo broken >merge/c.png
+go image pdf-one merge/a.png merge/c.png
+check "one pdf fails whole" '[[ $rc == 1 && $(ls merge | wc -l) == 4 ]]'
+magick -size 20x20 xc:red one.pdf
+go pdf png one.pdf
+check "single page pdf" '[[ $rc == 0 && -f one.png ]]'
+magick -size 9x9 xc:red -set comment secret m.jpg
+ANSWER='JPG|High|Original|TRUE|' go image ask m.jpg
+check "strip image" '[[ $rc == 0 ]] && grep -q secret m.jpg && ! grep -q secret "m (1).jpg"'
+ffmpeg -v error -i "$v" -metadata title=secret -metadata:s:v creation_time=2020-01-02T03:04:05Z m.mp4
+ANSWER='MP4 (H.264)|High|Original||||FALSE|TRUE|' go video ask m.mp4
+check "strip video" '[[ $rc == 0 ]] && ! ffprobe -v error -show_format -show_streams "m (1).mp4" | grep -E "secret|2020-01"'
+rm -rf "$HOME/.config"
 check "image types" '[[ $(file -b --mime-type "i [x]%d.jpg") == image/jpeg && $(file -b --mime-type p.webp) == image/webp ]]'
 for fmt in png jpg txt; do go pdf $fmt doc.pdf; check "pdf $fmt" '(( rc == 0 ))'; done
 check "pdf pages" '[[ $(ls doc | wc -l) == 2 && $(ls "doc (1)" | wc -l) == 2 ]]'
@@ -53,7 +72,7 @@ go video ask -dash.mkv
 check "trim" '[[ $rc == 0 && $(length ./-dash.mp4) == 2 ]]'
 ANSWER='GIF|Small file|480||||FALSE|' go video ask -dash.mkv
 ANSWER='GIF|Small file|480||||FALSE|' go video ask -dash.mkv
-check "remembers choice" 'grep -qx "MP4 (H.264)!MP4 (H.265)!WebM (VP9)!^GIF!.*" "$HOME/yad" && grep -qx "Original!1080!720!^480" "$HOME/yad"'
+check "remembers choice" 'grep -qx "MP4 (H.264)!MP4 (H.265)!MP4 (AV1)!WebM (VP9)!^GIF!.*" "$HOME/yad" && grep -qx "Original!1080!720!^480" "$HOME/yad"'
 for a in '1:99x||' '5|2|' '99||' '||0' '||abc'; do
   IFS='|' read -r s e z <<<"$a"
   ANSWER="MP4 (H.264)|High|Original|$s|$e|$z|FALSE|" go video ask відео.mkv
@@ -82,11 +101,18 @@ stub zenity 'sleep 1'
 ffmpeg -v error -f lavfi -i testsrc=d=120:s=1920x1080 -c:v mpeg4 long.mkv
 go video h265 long.mkv
 check "cancel" '[[ $rc == 1 && ! -e long.mp4 ]] && ! pgrep -f "ffmpeg.*$work/long.mkv" >/dev/null'
-stub soffice 'while (( $# > 1 )); do [[ $1 == --outdir ]] && d=$2; shift; done; mkdir -p "$d"; echo pdf >"$d/x.pdf"'
+stub soffice 'while (( $# > 1 )); do [[ $1 == --outdir ]] && d=$2; [[ $1 == --convert-to ]] && f=${2%%:*}; shift; done; mkdir -p "$d"; echo pdf >"$d/x.$f"'
 stub zenity 'cat >/dev/null'
 echo hi >w.docx; go office pdf w.docx
 check "office (stubbed)" '[[ $(<w.pdf) == pdf ]]'
 
+for fmt in docx csv; do go office $fmt w.docx; done
+check "office formats" '[[ -s "w (1).docx" && -s w.csv ]]'
+rm bin/soffice
+if ! command -v soffice >/dev/null; then
+  go office pdf w.docx
+  check "missing tool" '[[ $rc == 1 ]] && grep -q "Not installed: soffice" "$HOME/error"'
+fi
 check "originals intact" 'sha256sum --quiet -c "$HOME/sums"'
 check "no leftovers" '[[ -z $(find . -name ".dolphin-convert*") ]]'
 echo "Failed: $fails"

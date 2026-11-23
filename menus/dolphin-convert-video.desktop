@@ -1,63 +1,60 @@
 [Desktop Entry]
 Type=Service
 MimeType=video/*;
-Actions=h264;copy-mp4;gif;mp3;10mb;ask;
+Actions=h264;vp9;gif;mp3;_SEPARATOR_;copy-mp4;10mb;_SEPARATOR_;ask;
 X-KDE-Priority=TopLevel
-X-KDE-Submenu=Convert
-X-KDE-Submenu[uk]=Конвертувати
-X-KDE-Submenu[de]=Konvertieren
-X-KDE-Submenu[es]=Convertir
-X-KDE-Submenu[fr]=Convertir
-X-KDE-Submenu[pl]=Konwertuj
+X-KDE-Submenu=Convert to…
+X-KDE-Submenu[uk]=Конвертувати в…
+X-KDE-Submenu[de]=Umwandeln in…
+X-KDE-Submenu[es]=Convertir a…
+X-KDE-Submenu[fr]=Convertir en…
+X-KDE-Submenu[pl]=Konwertuj na…
+X-KDE-Submenu[nl]=Converteren naar…
+X-KDE-Submenu[ca]=Converteix a…
 
 [Desktop Action h264]
-Name=To MP4
-Name[uk]=У MP4
-Name[de]=In MP4
-Name[es]=A MP4
-Name[fr]=En MP4
-Name[pl]=Do MP4
-Icon=video-x-generic
+Name=MP4
 Exec=dolphin-convert video h264 %F
 
-[Desktop Action copy-mp4]
-Name=To MP4 without re-encoding
-Name[uk]=У MP4 без перекодування
-Name[de]=In MP4 ohne Neukodierung
-Name[es]=A MP4 sin recodificar
-Name[fr]=En MP4 sans réencodage
-Name[pl]=Do MP4 bez rekodowania
-Icon=video-x-generic
-Exec=dolphin-convert video copy-mp4 %F
+[Desktop Action vp9]
+Name=WebM
+Exec=dolphin-convert video vp9 %F
 
 [Desktop Action gif]
-Name=To GIF
-Name[uk]=У GIF
-Name[de]=In GIF
-Name[es]=A GIF
-Name[fr]=En GIF
-Name[pl]=Do GIF
-Icon=video-x-generic
+Name=GIF
 Exec=dolphin-convert video gif %F
 
 [Desktop Action mp3]
-Name=Extract audio (MP3)
-Name[uk]=Витягти звук (MP3)
-Name[de]=Ton extrahieren (MP3)
-Name[es]=Extraer audio (MP3)
-Name[fr]=Extraire l’audio (MP3)
-Name[pl]=Wyodrębnij dźwięk (MP3)
-Icon=video-x-generic
+Name=MP3 (audio only)
+Name[uk]=MP3 (лише звук)
+Name[de]=MP3 (nur Ton)
+Name[es]=MP3 (solo audio)
+Name[fr]=MP3 (audio seul)
+Name[pl]=MP3 (tylko dźwięk)
+Name[nl]=MP3 (alleen audio)
+Name[ca]=MP3 (només àudio)
 Exec=dolphin-convert video mp3 %F
 
+[Desktop Action copy-mp4]
+Name=MP4 (no re-encoding)
+Name[uk]=MP4 (без перекодування)
+Name[de]=MP4 (ohne Neukodierung)
+Name[es]=MP4 (sin recodificar)
+Name[fr]=MP4 (sans réencodage)
+Name[pl]=MP4 (bez rekodowania)
+Name[nl]=MP4 (zonder hercodering)
+Name[ca]=MP4 (sense recodificar)
+Exec=dolphin-convert video copy-mp4 %F
+
 [Desktop Action 10mb]
-Name=Compress to 10 MB
-Name[uk]=Стиснути до 10 МБ
-Name[de]=Auf 10 MB komprimieren
-Name[es]=Comprimir a 10 MB
-Name[fr]=Compresser à 10 Mo
-Name[pl]=Skompresuj do 10 MB
-Icon=video-x-generic
+Name=MP4, up to 10 MB
+Name[uk]=MP4, до 10 МБ
+Name[de]=MP4, bis 10 MB
+Name[es]=MP4, hasta 10 MB
+Name[fr]=MP4, jusqu’à 10 Mo
+Name[pl]=MP4, do 10 MB
+Name[nl]=MP4, tot 10 MB
+Name[ca]=MP4, fins a 10 MB
 Exec=dolphin-convert video 10mb %F
 
 [Desktop Action ask]
@@ -67,5 +64,6 @@ Name[de]=Weitere Optionen…
 Name[es]=Más opciones…
 Name[fr]=Plus d’options…
 Name[pl]=Więcej opcji…
-Icon=configure
+Name[nl]=Meer opties…
+Name[ca]=Més opcions…
 Exec=dolphin-convert video ask %F

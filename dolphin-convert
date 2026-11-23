@@ -13,27 +13,29 @@ t() { printf '%s' "${tr[$1]:-$1}"; }
 
 title=$(t Convert)
 usage() { echo "Usage: dolphin-convert video|audio|image|pdf|office FORMAT|ask FILE..." >&2; exit 2; }
-die() { kdialog --title "$title" --error "$(t "$1")"; exit 1; }
+die() { kdialog --title "$title" --error "$(t "$1")${2:+: $2}"; exit 1; }
+need() { local c; for c; do command -v "$c" >/dev/null || die "Not installed" "$c"; done; }
 (( $# >= 3 )) || usage
 kind=$1 format=$2
 shift 2
 
 declare -A label=(
-  [h264]="MP4 (H.264)" [h265]="MP4 (H.265)" [vp9]="WebM (VP9)" [gif]=GIF
+  [h264]="MP4 (H.264)" [h265]="MP4 (H.265)" [vp9]="WebM (VP9)" [av1]="MP4 (AV1)" [gif]=GIF
   [copy-mp4]="MP4 ($(t "no re-encoding"))" [copy-mkv]="MKV ($(t "no re-encoding"))"
   [mp3]=MP3 [m4a]="M4A (AAC)" [opus]=Opus [ogg]="OGG (Vorbis)" [flac]=FLAC [wav]=WAV
-  [jpg]=JPG [png]=PNG [webp]=WebP [tiff]=TIFF [pdf]=PDF [txt]=TXT
+  [jpg]=JPG [png]=PNG [webp]=WebP [avif]=AVIF [jxl]=JXL [tiff]=TIFF [bmp]=BMP [ico]=ICO
+  [pdf]=PDF [pdf-one]="PDF ($(t "one file"))" [txt]=TXT
 )
 case $kind in
-  video) formats=(h264 h265 vp9 gif mp3 copy-mp4 copy-mkv); label[mp3]="MP3 ($(t "audio only"))" ;;
+  video) formats=(h264 h265 av1 vp9 gif mp3 copy-mp4 copy-mkv); label[mp3]="MP3 ($(t "audio only"))" ;;
   audio) formats=(mp3 m4a opus ogg flac wav) ;;
-  image) formats=(jpg png webp tiff pdf) ;;
+  image) formats=(jpg png webp avif jxl tiff gif bmp ico pdf pdf-one) ;;
   pdf) formats=(png jpg txt) ;;
-  office) formats=(pdf) ;;
+  office) formats=(pdf docx odt xlsx ods csv pptx odp) ;;
   *) usage ;;
 esac
 
-q=1 height=0 gpu=FALSE start= end= size=
+q=1 height=0 gpu=FALSE strip=FALSE start= end= size=
 qualities=("$(t High)" "$(t Normal)" "$(t "Small file")")
 original=$(t Original)
 
@@ -50,12 +52,13 @@ combo() {
 
 ask() {
   local config=${XDG_CONFIG_HOME:-$HOME/.config}/dolphin-convert
-  local f_fmt f_q f_h f_gpu f_start f_end f_size answer i labels=() fields=()
-  local saved_fmt saved_q saved_h saved_gpu
-  [[ -r $config/$kind ]] && IFS='|' read -r saved_fmt saved_q saved_h saved_gpu <"$config/$kind"
+  local f_fmt f_q f_h f_gpu f_strip f_start f_end f_size answer i labels=() fields=()
+  local saved_fmt saved_q saved_h saved_gpu saved_strip
+  [[ -r $config/$kind ]] && IFS='|' read -r saved_fmt saved_q saved_h saved_gpu saved_strip <"$config/$kind"
   [[ $saved_q == [012] ]] || saved_q=1
   [[ $saved_h == @(1080|720|480) ]] || saved_h=$original
   [[ $saved_gpu == TRUE ]] || saved_gpu=FALSE
+  [[ $saved_strip == TRUE ]] || saved_strip=FALSE
   for i in "${formats[@]}"; do labels+=("${label[$i]}"); done
 
   fields+=(--field="$(t Format):CB" "$(combo "${label[${saved_fmt:-${formats[0]}}]}" "${labels[@]}")")
@@ -63,13 +66,14 @@ ask() {
   [[ $kind == @(video|image) ]] && fields+=(--field="$(t "Max height"):CB" "$(combo "$saved_h" "$original" 1080 720 480)")
   [[ $kind == @(video|audio) ]] && fields+=(--field="$(t Start) (0:15)" "" --field="$(t End) (1:30)" "")
   [[ $kind == video ]] && fields+=(--field="$(t "Target size, MB")" "" --field="$(t "Use GPU"):CHK" "$saved_gpu")
+  [[ $kind == @(video|audio|image) ]] && fields+=(--field="$(t "Remove metadata"):CHK" "$saved_strip")
 
   answer=$(yad --form --title="$title" --window-icon=document-export --center --width=380 --separator='|' \
     --text="$(t "Selected files"): $#" "${fields[@]}") || exit 0
   case $kind in
-    video) IFS='|' read -r f_fmt f_q f_h f_start f_end f_size f_gpu _ <<<"$answer" ;;
-    audio) IFS='|' read -r f_fmt f_q f_start f_end _ <<<"$answer" ;;
-    image) IFS='|' read -r f_fmt f_q f_h _ <<<"$answer" ;;
+    video) IFS='|' read -r f_fmt f_q f_h f_start f_end f_size f_gpu f_strip _ <<<"$answer" ;;
+    audio) IFS='|' read -r f_fmt f_q f_start f_end f_strip _ <<<"$answer" ;;
+    image) IFS='|' read -r f_fmt f_q f_h f_strip _ <<<"$answer" ;;
     pdf) IFS='|' read -r f_fmt _ <<<"$answer" ;;
   esac
 
@@ -77,8 +81,9 @@ ask() {
   for i in 0 1 2; do [[ ${qualities[i]} == "$f_q" ]] && q=$i; done
   [[ $f_h =~ ^[0-9]+$ ]] && height=$f_h
   [[ $f_gpu == TRUE ]] && gpu=TRUE
+  [[ $f_strip == TRUE ]] && strip=TRUE
   start=$f_start end=$f_end size=$f_size
-  mkdir -p "$config" && printf '%s\n' "$format|$q|$height|$gpu" >"$config/$kind"
+  mkdir -p "$config" && printf '%s\n' "$format|$q|$height|$gpu|$strip" >"$config/$kind"
 }
 
 # Print [[H:]M:]S[.frac] as microseconds
@@ -91,11 +96,19 @@ to_us() {
 }
 
 if [[ $format == ask ]]; then
+  need yad
   ask "$@"
 elif [[ $format == 10mb && $kind == video ]]; then
   format=h264 height=720 size=10
 fi
 [[ " ${formats[*]} " == *" $format "* ]] || usage
+
+case $kind in
+  video|audio) need ffmpeg ffprobe ;;
+  image) need magick; [[ $format == avif ]] && need ffmpeg; [[ $format == pdf-one ]] && need pdfunite ;;
+  pdf) if [[ $format == txt ]]; then need pdftotext; else need pdftoppm; fi ;;
+  office) need soffice ;;
+esac
 
 start_us=0 end_us=0
 if [[ $start ]]; then start_us=$(to_us "$start") || die "Invalid time"; fi
@@ -109,12 +122,14 @@ if [[ $size ]]; then
 fi
 
 case $format in
-  h264|h265|copy-mp4) ext=mp4 ;;
+  h264|h265|av1|copy-mp4) ext=mp4 ;;
   vp9) ext=webm ;;
   copy-mkv) ext=mkv ;;
+  pdf-one) ext=pdf ;;
   *) ext=$format ;;
 esac
-pages=
+pages= merge=
+[[ $format == pdf-one ]] && merge=1 format=pdf
 [[ $kind == pdf && $format != txt ]] && pages=1
 
 tmp=$(mktemp -d) || exit 1
@@ -152,7 +167,7 @@ run() {
   setsid "$@" </dev/null >"${sink:-/dev/null}" 2>"$tmp/log" 3>&- &
   job=$!
   while kill -0 "$job" 2>/dev/null; do
-    kill -0 "$ui" 2>/dev/null || { notify-send "$title" "$(t Canceled). $(t Done): $done_n"; exit 1; }
+    kill -0 "$ui" 2>/dev/null || { notify-send -a dolphin-convert "$title" "$(t Canceled). $(t Done): $done_n"; exit 1; }
     show_progress 2>/dev/null
     sleep 0.2
   done
@@ -235,6 +250,7 @@ convert_media() {
   (( start_us > 0 )) && input+=(-ss "${start_us}us")
   (( end_us > 0 )) && input+=(-t "$((end_us - start_us))us")
   input+=(-i "$f")
+  [[ $strip == TRUE ]] && input+=(-map_metadata -1 -map_metadata:s -1 -map_chapters -1)
 
   vf="pad=ceil(iw/2)*2:ceil(ih/2)*2"  # H.264/H.265 reject odd sizes
   (( height > 0 )) && vf="scale=-2:min($height\\,ih),$vf"
@@ -245,6 +261,8 @@ convert_media() {
       args=(-vf "$vf" -c:v libx264 -crf "${crf[q]}" -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
     h265) crf=(22 27 32) cq=(23 28 33)
       args=(-vf "$vf" -c:v libx265 -crf "${crf[q]}" -tag:v hvc1 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
+    av1) crf=(26 32 40)
+      args=(-vf "$vf" -c:v libsvtav1 -preset 8 -crf "${crf[q]}" -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
     vp9) crf=(28 34 40)
       args=(-vf "$vf" -c:v libvpx-vp9 -crf "${crf[q]}" -b:v 0 -row-mt 1 -cpu-used 4 -pix_fmt yuv420p -c:a libopus) ;;
     gif) fps=(20 15 10)
@@ -281,8 +299,19 @@ convert_image() {
     src=$tmp/decoded.png
   fi
   (( height > 0 )) && args+=(-resize "x$height>")
+  # The color profile stays, or wide-gamut photos change color
+  [[ $strip == TRUE ]] && args+=(+profile '!icc,*' +set comment)
+  if [[ $format == avif ]]; then
+    local crf=(18 26 34)
+    sink=$tmp/oriented.png run magick -background none "${src}[0]" -auto-orient "${args[@]}" png:- || return 1
+    # AVIF keeps transparency in a second stream
+    ffmpeg_run -i "$tmp/oriented.png" -filter_complex "format=rgba,split[c][a];[c]scale=out_color_matrix=bt709:out_range=pc,format=yuv420p,setparams=colorspace=bt709:range=pc[v];[a]alphaextract,format=gray,setparams=colorspace=bt709:range=pc[m]" \
+      -map "[v]" -map "[m]" -frames:v 1 -c:v libaom-av1 -still-picture 1 -cpu-used 6 -crf "${crf[q]}" "$part"
+    return
+  fi
+  [[ $format == ico ]] && args+=(-resize '256x256>' -gravity center -extent '%[fx:max(w,h)]x%[fx:max(w,h)]' -define icon:auto-resize=256,64,48,32,16)
   [[ $format == @(jpg|pdf) ]] && args+=(-background white -alpha remove)
-  [[ $format == @(jpg|webp|pdf) ]] && args+=(-quality "${quality[q]}")
+  [[ $format == @(jpg|webp|jxl|pdf) ]] && args+=(-quality "${quality[q]}")
   sink=$part run magick -background none "${src}[0]" -auto-orient "${args[@]}" "$format:-"
 }
 
@@ -290,16 +319,27 @@ convert_pdf() {
   local flag=-png
   [[ $format == txt ]] && { run pdftotext -layout "$f" "$part"; return; }
   [[ $format == jpg ]] && flag=-jpeg
-  mkdir "$part" && run pdftoppm "$flag" -r 150 "$f" "$part/page"
+  mkdir "$part" && run pdftoppm "$flag" -r 150 "$f" "$part/page" || return 1
+  local files=("$part"/*)
+  (( ${#files[@]} == 1 )) || return 0
+  mv -- "${files[0]}" "$tmp/page" && rmdir "$part" && mv -T -- "$tmp/page" "$part" && pick_out ".$ext"
 }
 
 # soffice names its own output, so use a scratch folder and a private profile
 convert_office() {
-  local produced
+  local produced filter=$ext
+  [[ $ext == csv ]] && filter="csv:Text - txt - csv (StarCalc):44,34,76"  # UTF-8, commas
   rm -rf "$tmp/office"
-  run soffice "-env:UserInstallation=file://$tmp/profile" --headless --convert-to pdf --outdir "$tmp/office" "$f" || return 1
-  produced=("$tmp"/office/*.pdf)
+  run soffice "-env:UserInstallation=file://$tmp/profile" --headless --convert-to "$filter" --outdir "$tmp/office" "$f" || return 1
+  produced=("$tmp"/office/*."$ext")
   [[ -f ${produced[0]} ]] && cp -- "${produced[0]}" "$part"
+}
+
+# pick_out SUFFIX: set out to a free name next to the source
+pick_out() {
+  local n=1
+  out=$base$1
+  while [[ -e $out || -L $out ]]; do out="$base ($((n++)))$1"; done
 }
 
 last_out=
@@ -307,11 +347,11 @@ for f in "$@"; do
   [[ $f == /* ]] || f=$PWD/$f
   name=${f##*/}
   stem=${name%.*}
-  base=${f%/*}/${stem:-$name} n=1
+  base=${f%/*}/${stem:-$name}
+  [[ $merge && $index == 0 ]] && merge_base=$base
   suffix=.$ext
   [[ $pages ]] && suffix=
-  out=$base$suffix
-  while [[ -e $out || -L $out ]]; do out="$base ($((n++)))$suffix"; done
+  pick_out "$suffix"
   part="${out%/*}/.dolphin-convert-$$.$ext"
   err= clip_us=0 pass_base=0 pass_span=100
   : >"$tmp/log"
@@ -319,7 +359,10 @@ for f in "$@"; do
     video|audio) convert_media ;;
     *) "convert_$kind" ;;
   esac
-  if (( $? == 0 )) && mv -nT -- "$part" "$out" && [[ ! -e $part ]]; then
+  rc=$?
+  if [[ $merge ]] && (( rc == 0 )) && mv -- "$part" "$tmp/$(printf %06d "$index").pdf"; then
+    done_n=$((done_n + 1))
+  elif [[ ! $merge ]] && (( rc == 0 )) && mv -nT -- "$part" "$out" && [[ ! -e $part ]]; then
     done_n=$((done_n + 1))
     last_out=$out
   else
@@ -329,15 +372,30 @@ for f in "$@"; do
   part=
   index=$((index + 1))
 done
+if [[ $merge ]] && (( ${#failed[@]} )); then
+  done_n=0  # no PDF with silently missing pages
+elif [[ $merge ]]; then
+  index=$((total - 1)) base=$merge_base
+  pick_out .pdf
+  part="${out%/*}/.dolphin-convert-$$.pdf"
+  if run pdfunite "$tmp"/[0-9]*.pdf "$part" && mv -nT -- "$part" "$out" && [[ ! -e $part ]]; then
+    last_out=$out
+  else
+    rm -f "$part"
+    done_n=0
+    failed+=("${out##*/}: $(tail -n1 "$tmp/log")")
+  fi
+  part=
+fi
 echo 100 >&3 2>/dev/null
 exec 3>&-
 
 summary="$(t Done): $done_n $(t of) $total"
 if [[ $last_out ]]; then
-  ( [[ $(timeout 600 notify-send -A "open=$(t "Open folder")" "$title" "$summary") == open ]] &&
+  ( [[ $(timeout 600 notify-send -A "open=$(t "Open folder")" -a dolphin-convert "$title" "$summary") == open ]] &&
     exec dolphin --select "$last_out" ) >/dev/null 2>&1 &
 else
-  notify-send "$title" "$summary"
+  notify-send -a dolphin-convert "$title" "$summary"
 fi
 if (( ${#failed[@]} )); then
   kdialog --title "$title" --error "$(printf '%s\n' "$(t Failed):" "${failed[@]}")"

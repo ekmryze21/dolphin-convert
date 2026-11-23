@@ -1,43 +1,39 @@
 [Desktop Entry]
 Type=Service
 MimeType=audio/*;
-Actions=mp3;flac;wav;ask;
+Actions=mp3;m4a;opus;ogg;flac;wav;_SEPARATOR_;ask;
 X-KDE-Priority=TopLevel
-X-KDE-Submenu=Convert
-X-KDE-Submenu[uk]=Конвертувати
-X-KDE-Submenu[de]=Konvertieren
-X-KDE-Submenu[es]=Convertir
-X-KDE-Submenu[fr]=Convertir
-X-KDE-Submenu[pl]=Konwertuj
+X-KDE-Submenu=Convert to…
+X-KDE-Submenu[uk]=Конвертувати в…
+X-KDE-Submenu[de]=Umwandeln in…
+X-KDE-Submenu[es]=Convertir a…
+X-KDE-Submenu[fr]=Convertir en…
+X-KDE-Submenu[pl]=Konwertuj na…
+X-KDE-Submenu[nl]=Converteren naar…
+X-KDE-Submenu[ca]=Converteix a…
 
 [Desktop Action mp3]
-Name=To MP3
-Name[uk]=У MP3
-Name[de]=In MP3
-Name[es]=A MP3
-Name[fr]=En MP3
-Name[pl]=Do MP3
-Icon=audio-x-generic
+Name=MP3
 Exec=dolphin-convert audio mp3 %F
 
+[Desktop Action m4a]
+Name=M4A
+Exec=dolphin-convert audio m4a %F
+
+[Desktop Action opus]
+Name=Opus
+Exec=dolphin-convert audio opus %F
+
+[Desktop Action ogg]
+Name=OGG
+Exec=dolphin-convert audio ogg %F
+
 [Desktop Action flac]
-Name=To FLAC
-Name[uk]=У FLAC
-Name[de]=In FLAC
-Name[es]=A FLAC
-Name[fr]=En FLAC
-Name[pl]=Do FLAC
-Icon=audio-x-generic
+Name=FLAC
 Exec=dolphin-convert audio flac %F
 
 [Desktop Action wav]
-Name=To WAV
-Name[uk]=У WAV
-Name[de]=In WAV
-Name[es]=A WAV
-Name[fr]=En WAV
-Name[pl]=Do WAV
-Icon=audio-x-generic
+Name=WAV
 Exec=dolphin-convert audio wav %F
 
 [Desktop Action ask]
@@ -47,5 +43,6 @@ Name[de]=Weitere Optionen…
 Name[es]=Más opciones…
 Name[fr]=Plus d’options…
 Name[pl]=Więcej opcji…
-Icon=configure
+Name[nl]=Meer opties…
+Name[ca]=Més opcions…
 Exec=dolphin-convert audio ask %F
