@@ -1,0 +1,61 @@
+[Desktop Entry]
+Type=Service
+MimeType=image/jpeg;image/png;image/webp;image/gif;image/bmp;image/tiff;image/avif;image/jxl;image/svg+xml;
+Actions=jpg;png;webp;pdf;ask;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert
+X-KDE-Submenu[uk]=Конвертувати
+X-KDE-Submenu[de]=Konvertieren
+X-KDE-Submenu[es]=Convertir
+X-KDE-Submenu[fr]=Convertir
+X-KDE-Submenu[pl]=Konwertuj
+
+[Desktop Action jpg]
+Name=To JPG
+Name[uk]=У JPG
+Name[de]=In JPG
+Name[es]=A JPG
+Name[fr]=En JPG
+Name[pl]=Do JPG
+Icon=image-x-generic
+Exec=dolphin-convert image jpg %F
+
+[Desktop Action png]
+Name=To PNG
+Name[uk]=У PNG
+Name[de]=In PNG
+Name[es]=A PNG
+Name[fr]=En PNG
+Name[pl]=Do PNG
+Icon=image-x-generic
+Exec=dolphin-convert image png %F
+
+[Desktop Action webp]
+Name=To WebP
+Name[uk]=У WebP
+Name[de]=In WebP
+Name[es]=A WebP
+Name[fr]=En WebP
+Name[pl]=Do WebP
+Icon=image-x-generic
+Exec=dolphin-convert image webp %F
+
+[Desktop Action pdf]
+Name=To PDF
+Name[uk]=У PDF
+Name[de]=In PDF
+Name[es]=A PDF
+Name[fr]=En PDF
+Name[pl]=Do PDF
+Icon=image-x-generic
+Exec=dolphin-convert image pdf %F
+
+[Desktop Action ask]
+Name=More options…
+Name[uk]=Більше параметрів…
+Name[de]=Weitere Optionen…
+Name[es]=Más opciones…
+Name[fr]=Plus d’options…
+Name[pl]=Więcej opcji…
+Icon=configure
+Exec=dolphin-convert image ask %F

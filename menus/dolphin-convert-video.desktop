@@ -1,0 +1,71 @@
+[Desktop Entry]
+Type=Service
+MimeType=video/*;
+Actions=h264;copy-mp4;gif;mp3;10mb;ask;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert
+X-KDE-Submenu[uk]=Конвертувати
+X-KDE-Submenu[de]=Konvertieren
+X-KDE-Submenu[es]=Convertir
+X-KDE-Submenu[fr]=Convertir
+X-KDE-Submenu[pl]=Konwertuj
+
+[Desktop Action h264]
+Name=To MP4
+Name[uk]=У MP4
+Name[de]=In MP4
+Name[es]=A MP4
+Name[fr]=En MP4
+Name[pl]=Do MP4
+Icon=video-x-generic
+Exec=dolphin-convert video h264 %F
+
+[Desktop Action copy-mp4]
+Name=To MP4 without re-encoding
+Name[uk]=У MP4 без перекодування
+Name[de]=In MP4 ohne Neukodierung
+Name[es]=A MP4 sin recodificar
+Name[fr]=En MP4 sans réencodage
+Name[pl]=Do MP4 bez rekodowania
+Icon=video-x-generic
+Exec=dolphin-convert video copy-mp4 %F
+
+[Desktop Action gif]
+Name=To GIF
+Name[uk]=У GIF
+Name[de]=In GIF
+Name[es]=A GIF
+Name[fr]=En GIF
+Name[pl]=Do GIF
+Icon=video-x-generic
+Exec=dolphin-convert video gif %F
+
+[Desktop Action mp3]
+Name=Extract audio (MP3)
+Name[uk]=Витягти звук (MP3)
+Name[de]=Ton extrahieren (MP3)
+Name[es]=Extraer audio (MP3)
+Name[fr]=Extraire l’audio (MP3)
+Name[pl]=Wyodrębnij dźwięk (MP3)
+Icon=video-x-generic
+Exec=dolphin-convert video mp3 %F
+
+[Desktop Action 10mb]
+Name=Compress to 10 MB
+Name[uk]=Стиснути до 10 МБ
+Name[de]=Auf 10 MB komprimieren
+Name[es]=Comprimir a 10 MB
+Name[fr]=Compresser à 10 Mo
+Name[pl]=Skompresuj do 10 MB
+Icon=video-x-generic
+Exec=dolphin-convert video 10mb %F
+
+[Desktop Action ask]
+Name=More options…
+Name[uk]=Більше параметрів…
+Name[de]=Weitere Optionen…
+Name[es]=Más opciones…
+Name[fr]=Plus d’options…
+Name[pl]=Więcej opcji…
+Icon=configure
+Exec=dolphin-convert video ask %F

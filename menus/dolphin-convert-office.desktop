@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/vnd.oasis.opendocument.text;application/vnd.oasis.opendocument.spreadsheet;application/vnd.oasis.opendocument.presentation;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/msword;application/vnd.ms-excel;application/vnd.ms-powerpoint;application/rtf;
+Actions=pdf;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert
+X-KDE-Submenu[uk]=Конвертувати
+X-KDE-Submenu[de]=Konvertieren
+X-KDE-Submenu[es]=Convertir
+X-KDE-Submenu[fr]=Convertir
+X-KDE-Submenu[pl]=Konwertuj
+
+[Desktop Action pdf]
+Name=To PDF
+Name[uk]=У PDF
+Name[de]=In PDF
+Name[es]=A PDF
+Name[fr]=En PDF
+Name[pl]=Do PDF
+Icon=x-office-document
+Exec=dolphin-convert office pdf %F

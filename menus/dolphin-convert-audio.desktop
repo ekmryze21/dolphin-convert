@@ -1,0 +1,51 @@
+[Desktop Entry]
+Type=Service
+MimeType=audio/*;
+Actions=mp3;flac;wav;ask;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert
+X-KDE-Submenu[uk]=Конвертувати
+X-KDE-Submenu[de]=Konvertieren
+X-KDE-Submenu[es]=Convertir
+X-KDE-Submenu[fr]=Convertir
+X-KDE-Submenu[pl]=Konwertuj
+
+[Desktop Action mp3]
+Name=To MP3
+Name[uk]=У MP3
+Name[de]=In MP3
+Name[es]=A MP3
+Name[fr]=En MP3
+Name[pl]=Do MP3
+Icon=audio-x-generic
+Exec=dolphin-convert audio mp3 %F
+
+[Desktop Action flac]
+Name=To FLAC
+Name[uk]=У FLAC
+Name[de]=In FLAC
+Name[es]=A FLAC
+Name[fr]=En FLAC
+Name[pl]=Do FLAC
+Icon=audio-x-generic
+Exec=dolphin-convert audio flac %F
+
+[Desktop Action wav]
+Name=To WAV
+Name[uk]=У WAV
+Name[de]=In WAV
+Name[es]=A WAV
+Name[fr]=En WAV
+Name[pl]=Do WAV
+Icon=audio-x-generic
+Exec=dolphin-convert audio wav %F
+
+[Desktop Action ask]
+Name=More options…
+Name[uk]=Більше параметрів…
+Name[de]=Weitere Optionen…
+Name[es]=Más opciones…
+Name[fr]=Plus d’options…
+Name[pl]=Więcej opcji…
+Icon=configure
+Exec=dolphin-convert audio ask %F

@@ -1,0 +1,41 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/pdf;
+Actions=png;jpg;txt;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert
+X-KDE-Submenu[uk]=Конвертувати
+X-KDE-Submenu[de]=Konvertieren
+X-KDE-Submenu[es]=Convertir
+X-KDE-Submenu[fr]=Convertir
+X-KDE-Submenu[pl]=Konwertuj
+
+[Desktop Action png]
+Name=To PNG
+Name[uk]=У PNG
+Name[de]=In PNG
+Name[es]=A PNG
+Name[fr]=En PNG
+Name[pl]=Do PNG
+Icon=application-pdf
+Exec=dolphin-convert pdf png %F
+
+[Desktop Action jpg]
+Name=To JPG
+Name[uk]=У JPG
+Name[de]=In JPG
+Name[es]=A JPG
+Name[fr]=En JPG
+Name[pl]=Do JPG
+Icon=application-pdf
+Exec=dolphin-convert pdf jpg %F
+
+[Desktop Action txt]
+Name=To text (TXT)
+Name[uk]=У текст (TXT)
+Name[de]=In Text (TXT)
+Name[es]=A texto (TXT)
+Name[fr]=En texte (TXT)
+Name[pl]=Do tekstu (TXT)
+Icon=application-pdf
+Exec=dolphin-convert pdf txt %F

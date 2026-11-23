@@ -1,0 +1,345 @@
+#!/bin/bash
+# Dolphin context-menu converter: dolphin-convert KIND FORMAT|ask FILE...
+trap '' PIPE
+export LC_NUMERIC=C
+
+declare -A tr
+locale=${LANGUAGE%%:*}
+locale=${locale:-${LC_ALL:-${LC_MESSAGES:-$LANG}}}
+locale=${locale%%[_.@]*}
+lang_file=~/.local/share/dolphin-convert/lang/$locale.sh
+[[ $locale =~ ^[a-z]{2,3}$ && -r $lang_file ]] && . "$lang_file"
+t() { printf '%s' "${tr[$1]:-$1}"; }
+
+title=$(t Convert)
+usage() { echo "Usage: dolphin-convert video|audio|image|pdf|office FORMAT|ask FILE..." >&2; exit 2; }
+die() { kdialog --title "$title" --error "$(t "$1")"; exit 1; }
+(( $# >= 3 )) || usage
+kind=$1 format=$2
+shift 2
+
+declare -A label=(
+  [h264]="MP4 (H.264)" [h265]="MP4 (H.265)" [vp9]="WebM (VP9)" [gif]=GIF
+  [copy-mp4]="MP4 ($(t "no re-encoding"))" [copy-mkv]="MKV ($(t "no re-encoding"))"
+  [mp3]=MP3 [m4a]="M4A (AAC)" [opus]=Opus [ogg]="OGG (Vorbis)" [flac]=FLAC [wav]=WAV
+  [jpg]=JPG [png]=PNG [webp]=WebP [tiff]=TIFF [pdf]=PDF [txt]=TXT
+)
+case $kind in
+  video) formats=(h264 h265 vp9 gif mp3 copy-mp4 copy-mkv); label[mp3]="MP3 ($(t "audio only"))" ;;
+  audio) formats=(mp3 m4a opus ogg flac wav) ;;
+  image) formats=(jpg png webp tiff pdf) ;;
+  pdf) formats=(png jpg txt) ;;
+  office) formats=(pdf) ;;
+  *) usage ;;
+esac
+
+q=1 height=0 gpu=FALSE start= end= size=
+qualities=("$(t High)" "$(t Normal)" "$(t "Small file")")
+original=$(t Original)
+
+# combo SELECTED ITEM...: yad combo box values with one preselected
+combo() {
+  local selected=$1 item out=
+  shift
+  for item; do
+    [[ $item == "$selected" ]] && item="^$item"
+    out+="!$item"
+  done
+  printf '%s' "${out:1}"
+}
+
+ask() {
+  local config=${XDG_CONFIG_HOME:-$HOME/.config}/dolphin-convert
+  local f_fmt f_q f_h f_gpu f_start f_end f_size answer i labels=() fields=()
+  local saved_fmt saved_q saved_h saved_gpu
+  [[ -r $config/$kind ]] && IFS='|' read -r saved_fmt saved_q saved_h saved_gpu <"$config/$kind"
+  [[ $saved_q == [012] ]] || saved_q=1
+  [[ $saved_h == @(1080|720|480) ]] || saved_h=$original
+  [[ $saved_gpu == TRUE ]] || saved_gpu=FALSE
+  for i in "${formats[@]}"; do labels+=("${label[$i]}"); done
+
+  fields+=(--field="$(t Format):CB" "$(combo "${label[${saved_fmt:-${formats[0]}}]}" "${labels[@]}")")
+  [[ $kind == pdf ]] || fields+=(--field="$(t Quality):CB" "$(combo "${qualities[saved_q]}" "${qualities[@]}")")
+  [[ $kind == @(video|image) ]] && fields+=(--field="$(t "Max height"):CB" "$(combo "$saved_h" "$original" 1080 720 480)")
+  [[ $kind == @(video|audio) ]] && fields+=(--field="$(t Start) (0:15)" "" --field="$(t End) (1:30)" "")
+  [[ $kind == video ]] && fields+=(--field="$(t "Target size, MB")" "" --field="$(t "Use GPU"):CHK" "$saved_gpu")
+
+  answer=$(yad --form --title="$title" --window-icon=document-export --center --width=380 --separator='|' \
+    --text="$(t "Selected files"): $#" "${fields[@]}") || exit 0
+  case $kind in
+    video) IFS='|' read -r f_fmt f_q f_h f_start f_end f_size f_gpu _ <<<"$answer" ;;
+    audio) IFS='|' read -r f_fmt f_q f_start f_end _ <<<"$answer" ;;
+    image) IFS='|' read -r f_fmt f_q f_h _ <<<"$answer" ;;
+    pdf) IFS='|' read -r f_fmt _ <<<"$answer" ;;
+  esac
+
+  for i in "${formats[@]}"; do [[ ${label[$i]} == "$f_fmt" ]] && format=$i; done
+  for i in 0 1 2; do [[ ${qualities[i]} == "$f_q" ]] && q=$i; done
+  [[ $f_h =~ ^[0-9]+$ ]] && height=$f_h
+  [[ $f_gpu == TRUE ]] && gpu=TRUE
+  start=$f_start end=$f_end size=$f_size
+  mkdir -p "$config" && printf '%s\n' "$format|$q|$height|$gpu" >"$config/$kind"
+}
+
+# Print [[H:]M:]S[.frac] as microseconds
+to_us() {
+  [[ $1 =~ ^(([0-9]{1,3}):)?(([0-9]{1,4}):)?([0-9]{1,6})(\.([0-9]{1,6}))?$ ]] || return 1
+  local h=${BASH_REMATCH[2]:-0} m=${BASH_REMATCH[4]:-0} s=${BASH_REMATCH[5]} frac=${BASH_REMATCH[7]}000000
+  # A single colon means M:S, which the regex captures in the hours group
+  [[ ${BASH_REMATCH[4]} ]] || { m=$h; h=0; }
+  echo $(( ((10#$h * 60 + 10#$m) * 60 + 10#$s) * 1000000 + 10#${frac:0:6} ))
+}
+
+if [[ $format == ask ]]; then
+  ask "$@"
+elif [[ $format == 10mb && $kind == video ]]; then
+  format=h264 height=720 size=10
+fi
+[[ " ${formats[*]} " == *" $format "* ]] || usage
+
+start_us=0 end_us=0
+if [[ $start ]]; then start_us=$(to_us "$start") || die "Invalid time"; fi
+if [[ $end ]]; then
+  end_us=$(to_us "$end") || die "Invalid time"
+  (( end_us > start_us )) || die "Invalid time"
+fi
+if [[ $size ]]; then
+  [[ $size =~ ^[1-9][0-9]{0,5}$ ]] || die "Invalid size"
+  [[ $format == @(h264|h265|vp9) ]] || die "Target size works only with H.264, H.265 and VP9"
+fi
+
+case $format in
+  h264|h265|copy-mp4) ext=mp4 ;;
+  vp9) ext=webm ;;
+  copy-mkv) ext=mkv ;;
+  *) ext=$format ;;
+esac
+pages=
+[[ $kind == pdf && $format != txt ]] && pages=1
+
+tmp=$(mktemp -d) || exit 1
+job= part=
+stop_job() { kill -KILL -- "-$job" "$job"; wait "$job"; }
+trap '[[ $job ]] && stop_job 2>/dev/null; rm -rf "$tmp"; [[ $part ]] && rm -rf "$part"' EXIT
+trap 'exit 1' INT TERM
+
+exec 3> >(exec zenity --progress --percentage=0 --auto-close --width=420 --title="$title" --text="$(t Converting)")
+ui=$!
+
+total=$# index=0 done_n=0 failed=()
+pass_base=0 pass_span=100 clip_us=0 last_shown=
+
+show_progress() {
+  local us=0 pct shown
+  if (( clip_us > 0 )); then
+    us=$(sed -n 's/^out_time_us=\([0-9]\{1,\}\)$/\1/p' "$tmp/progress" | tail -n1)
+  fi
+  pct=$(( clip_us > 0 ? ${us:-0} * pass_span / clip_us + pass_base : 0 ))
+  (( pct > 99 )) && pct=99
+  # zenity may read these characters as markup or escapes
+  shown="$((index + 1)) $(t of) $total: ${name//[\\&<$'\n']/_}"
+  (( clip_us > 0 )) && shown+=" ($pct%)"
+  pct=$(( (index * 100 + pct) / total ))
+  [[ $shown == "$last_shown" ]] && return
+  last_shown=$shown
+  printf '%s\n# %s\n' "$pct" "$shown" >&3
+}
+
+# Run a command, updating progress; its stdout goes to $sink if set
+run() {
+  local rc
+  : >"$tmp/progress"
+  setsid "$@" </dev/null >"${sink:-/dev/null}" 2>"$tmp/log" 3>&- &
+  job=$!
+  while kill -0 "$job" 2>/dev/null; do
+    kill -0 "$ui" 2>/dev/null || { notify-send "$title" "$(t Canceled). $(t Done): $done_n"; exit 1; }
+    show_progress 2>/dev/null
+    sleep 0.2
+  done
+  wait "$job"
+  rc=$?
+  job=
+  return $rc
+}
+
+ffmpeg_run() { run ffmpeg -nostdin -y -v error -progress "$tmp/progress" "$@"; }
+
+probe() { ffprobe -v error -show_entries "$1" -of csv=p=0 -i "$f" 2>/dev/null | head -n1; }
+
+# Find the encoder family that really works on this machine
+hw=
+if [[ $gpu == TRUE && -z $size && $format == @(h264|h265) ]]; then
+  codec=${format/h265/hevc}
+  test_src=(-v error -f lavfi -i color=s=640x360:d=0.1)
+  if ffmpeg "${test_src[@]}" -c:v "${codec}_nvenc" -f null - 2>/dev/null; then
+    hw=nvenc
+  else
+    for node in /dev/dri/renderD*; do
+      ffmpeg -vaapi_device "$node" "${test_src[@]}" -vf format=nv12,hwupload -c:v "${codec}_vaapi" -f null - 2>/dev/null &&
+        { hw=vaapi; break; }
+    done
+  fi
+fi
+
+# fit_size: two-pass encode under $size MB
+fit_size() {
+  local limit=$((size * 1000000)) total_kbps audio=96 video source_kbps codec_args pass_args p try actual
+  (( clip_us > 0 )) || { err="Unknown duration"; return 1; }
+  total_kbps=$(( limit * 8 * 96 / 100 * 1000 / clip_us ))
+  (( total_kbps < 400 )) && audio=48
+  [[ $(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 -i "$f") ]] || audio=0
+  video=$((total_kbps - audio))
+  (( video >= 40 )) || { err="File is too long for this size"; return 1; }
+  source_kbps=$(( $(stat -Lc %s -- "$f") * 8 * 1000 / duration_us ))
+  (( source_kbps < 40 )) && source_kbps=40
+  (( video > source_kbps )) && video=$source_kbps
+  for try in 1 2 3 4; do
+    for p in 1 2; do
+      pass_base=$(( (p - 1) * 50 )) pass_span=50
+      pass_args=(-pass $p -passlogfile "$tmp/pass")
+      case $format in
+        h264) codec_args=(-c:v libx264 "${pass_args[@]}" -c:a aac -movflags +faststart) ;;
+        h265) codec_args=(-c:v libx265 -x265-params "log-level=error:pass=$p:stats=$tmp/x265" -tag:v hvc1 -c:a aac -movflags +faststart) ;;
+        vp9) codec_args=(-c:v libvpx-vp9 -row-mt 1 -cpu-used 4 "${pass_args[@]}" -c:a libopus) ;;
+      esac
+      codec_args+=(-vf "$vf" -pix_fmt yuv420p -b:v "${video}k" -b:a "$((audio ? audio : 96))k" -sn)
+      if (( p == 1 )); then
+        ffmpeg_run "${input[@]}" "${codec_args[@]}" -an -f null /dev/null || return 1
+      else
+        ffmpeg_run "${input[@]}" "${codec_args[@]}" "$part" || return 1
+      fi
+    done
+    actual=$(stat -c %s -- "$part")
+    (( actual <= limit )) && return 0
+    video=$((video * limit / actual * 93 / 100))
+    (( video >= 20 )) || break
+  done
+  err="Could not fit the target size"
+  return 1
+}
+
+convert_media() {
+  local duration crf args fps rate cq
+  duration=$(probe format=duration)
+  duration_us=0
+  [[ $duration =~ ^([0-9]+)\.([0-9]{6})$ ]] && duration_us=$((10#${BASH_REMATCH[1]}${BASH_REMATCH[2]}))
+  if (( duration_us > 0 && start_us >= duration_us )); then
+    err="Start is past the end"
+    return 1
+  fi
+  clip_us=$duration_us
+  (( end_us > 0 && (duration_us == 0 || end_us < duration_us) )) && clip_us=$end_us
+  (( clip_us > 0 )) && clip_us=$((clip_us - start_us))
+
+  input=()
+  (( start_us > 0 )) && input+=(-ss "${start_us}us")
+  (( end_us > 0 )) && input+=(-t "$((end_us - start_us))us")
+  input+=(-i "$f")
+
+  vf="pad=ceil(iw/2)*2:ceil(ih/2)*2"  # H.264/H.265 reject odd sizes
+  (( height > 0 )) && vf="scale=-2:min($height\\,ih),$vf"
+  [[ $size ]] && { fit_size; return; }
+
+  case $format in
+    h264) crf=(18 23 28) cq=(19 24 29)
+      args=(-vf "$vf" -c:v libx264 -crf "${crf[q]}" -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
+    h265) crf=(22 27 32) cq=(23 28 33)
+      args=(-vf "$vf" -c:v libx265 -crf "${crf[q]}" -tag:v hvc1 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
+    vp9) crf=(28 34 40)
+      args=(-vf "$vf" -c:v libvpx-vp9 -crf "${crf[q]}" -b:v 0 -row-mt 1 -cpu-used 4 -pix_fmt yuv420p -c:a libopus) ;;
+    gif) fps=(20 15 10)
+      args=(-vf "$vf,fps=${fps[q]},split[a][b];[a]palettegen[p];[b][p]paletteuse") ;;
+    copy-mp4) args=(-map 0:V -map "0:a?" -c copy -movflags +faststart) ;;
+    copy-mkv) args=(-map 0:V -map "0:a?" -map "0:s?" -map "0:t?" -c copy) ;;
+    mp3) rate=(256k 192k 128k); args=(-vn -c:a libmp3lame -b:a "${rate[q]}") ;;
+    m4a) rate=(256k 192k 128k); args=(-vn -c:a aac -b:a "${rate[q]}" -movflags +faststart) ;;
+    opus) rate=(192k 128k 80k); args=(-vn -c:a libopus -b:a "${rate[q]}") ;;
+    ogg) rate=(256k 192k 128k); args=(-vn -c:a libvorbis -b:a "${rate[q]}") ;;
+    flac) args=(-vn -c:a flac) ;;
+    wav) args=(-vn -c:a pcm_s16le) ;;
+  esac
+
+  # Hardware encoders have size limits, so any failure falls back to the CPU
+  local tail=(-c:a aac -movflags +faststart)
+  [[ $format == h265 ]] && tail+=(-tag:v hvc1)
+  case $hw in
+    nvenc) ffmpeg_run "${input[@]}" -vf "$vf" -c:v "${codec}_nvenc" -preset p5 -rc vbr -cq "${cq[q]}" -b:v 0 \
+      -pix_fmt yuv420p "${tail[@]}" "$part" && return ;;
+    vaapi) ffmpeg_run -vaapi_device "$node" "${input[@]}" -vf "$vf,format=nv12,hwupload" -c:v "${codec}_vaapi" \
+      -qp "${cq[q]}" "${tail[@]}" "$part" && return ;;
+  esac
+  ffmpeg_run "${input[@]}" "${args[@]}" "$part"
+}
+
+# The source is linked under a plain name: magick parses [], : and % in paths
+convert_image() {
+  local quality=(95 85 70) args=() src=$tmp/in suffix=${name##*.}
+  [[ $suffix =~ ^[A-Za-z0-9]+$ && $suffix != "$name" ]] && src+=.${suffix,,}
+  ln -sf -- "$f" "$src"
+  if [[ $src == *.avif ]]; then
+    ffmpeg_run -i "$f" -frames:v 1 "$tmp/decoded.png" || return 1
+    src=$tmp/decoded.png
+  fi
+  (( height > 0 )) && args+=(-resize "x$height>")
+  [[ $format == @(jpg|pdf) ]] && args+=(-background white -alpha remove)
+  [[ $format == @(jpg|webp|pdf) ]] && args+=(-quality "${quality[q]}")
+  sink=$part run magick -background none "${src}[0]" -auto-orient "${args[@]}" "$format:-"
+}
+
+convert_pdf() {
+  local flag=-png
+  [[ $format == txt ]] && { run pdftotext -layout "$f" "$part"; return; }
+  [[ $format == jpg ]] && flag=-jpeg
+  mkdir "$part" && run pdftoppm "$flag" -r 150 "$f" "$part/page"
+}
+
+# soffice names its own output, so use a scratch folder and a private profile
+convert_office() {
+  local produced
+  rm -rf "$tmp/office"
+  run soffice "-env:UserInstallation=file://$tmp/profile" --headless --convert-to pdf --outdir "$tmp/office" "$f" || return 1
+  produced=("$tmp"/office/*.pdf)
+  [[ -f ${produced[0]} ]] && cp -- "${produced[0]}" "$part"
+}
+
+last_out=
+for f in "$@"; do
+  [[ $f == /* ]] || f=$PWD/$f
+  name=${f##*/}
+  stem=${name%.*}
+  base=${f%/*}/${stem:-$name} n=1
+  suffix=.$ext
+  [[ $pages ]] && suffix=
+  out=$base$suffix
+  while [[ -e $out || -L $out ]]; do out="$base ($((n++)))$suffix"; done
+  part="${out%/*}/.dolphin-convert-$$.$ext"
+  err= clip_us=0 pass_base=0 pass_span=100
+  : >"$tmp/log"
+  case $kind in
+    video|audio) convert_media ;;
+    *) "convert_$kind" ;;
+  esac
+  if (( $? == 0 )) && mv -nT -- "$part" "$out" && [[ ! -e $part ]]; then
+    done_n=$((done_n + 1))
+    last_out=$out
+  else
+    rm -rf "$part"
+    failed+=("$name: $([[ $err ]] && t "$err" || tail -n1 "$tmp/log")")
+  fi
+  part=
+  index=$((index + 1))
+done
+echo 100 >&3 2>/dev/null
+exec 3>&-
+
+summary="$(t Done): $done_n $(t of) $total"
+if [[ $last_out ]]; then
+  ( [[ $(timeout 600 notify-send -A "open=$(t "Open folder")" "$title" "$summary") == open ]] &&
+    exec dolphin --select "$last_out" ) >/dev/null 2>&1 &
+else
+  notify-send "$title" "$summary"
+fi
+if (( ${#failed[@]} )); then
+  kdialog --title "$title" --error "$(printf '%s\n' "$(t Failed):" "${failed[@]}")"
+  exit 1
+fi
