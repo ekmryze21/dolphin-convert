@@ -1,6 +1,10 @@
+<img src="icons/dolphin-convert.svg" width="96" alt="">
+
 # dolphin-convert
 
 Adds a **Convert to…** submenu to the Dolphin context menu for video, audio, images, PDF and office documents. Results are saved next to the originals, which are never modified or overwritten.
+
+![Context menu and options window for a video](screenshot.png)
 
 | Files | Formats |
 | --- | --- |
@@ -20,7 +24,8 @@ Available in English, Ukrainian, German, Spanish, French, Polish, Dutch and Cata
 
 - KDE Plasma 6 with Dolphin
 - `ffmpeg` with libx264, libx265, libsvtav1, libaom, libvpx-vp9, libopus, libvorbis and libmp3lame
-- `yad`, `zenity`, `kdialog`, `notify-send`
+- Python 3 with PyGObject and libadwaita 1.6 or newer (`python3-gobject`, `libadwaita`) for the windows
+- `kdialog`, `notify-send`
 - ImageMagick 7 (`magick`) for images, Poppler (`pdftoppm`, `pdftotext`, `pdfunite`) for PDF
 - LibreOffice (`soffice`) for office documents, optional; the Flatpak version is not supported
 

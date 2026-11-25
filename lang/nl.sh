@@ -16,6 +16,7 @@ tr=(
   ["no re-encoding"]="zonder hercodering"
   ["Converting"]="Converteren"
   ["of"]="van"
+  ["Cancel"]="Annuleren"
   ["Canceled"]="Geannuleerd"
   ["Done"]="Klaar"
   ["Failed"]="Mislukt"

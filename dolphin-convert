@@ -12,8 +12,10 @@ lang_file=~/.local/share/dolphin-convert/lang/$locale.sh
 t() { printf '%s' "${tr[$1]:-$1}"; }
 
 title=$(t Convert)
+ui_app=~/.local/share/dolphin-convert/ui.py
 usage() { echo "Usage: dolphin-convert video|audio|image|pdf|office FORMAT|ask FILE..." >&2; exit 2; }
-die() { kdialog --title "$title" --error "$(t "$1")${2:+: $2}"; exit 1; }
+die() { kdialog --icon dolphin-convert --title "$title" --error "$(t "$1")${2:+: $2}"; exit 1; }
+no_ui() { die "Not installed" "python3-gobject, libadwaita"; }
 need() { local c; for c; do command -v "$c" >/dev/null || die "Not installed" "$c"; done; }
 (( $# >= 3 )) || usage
 kind=$1 format=$2
@@ -39,7 +41,7 @@ q=1 height=0 gpu=FALSE strip=FALSE start= end= size=
 qualities=("$(t High)" "$(t Normal)" "$(t "Small file")")
 original=$(t Original)
 
-# combo SELECTED ITEM...: yad combo box values with one preselected
+# combo SELECTED ITEM...: ui.py combo box values with one preselected
 combo() {
   local selected=$1 item out=
   shift
@@ -61,15 +63,15 @@ ask() {
   [[ $saved_strip == TRUE ]] || saved_strip=FALSE
   for i in "${formats[@]}"; do labels+=("${label[$i]}"); done
 
-  fields+=(--field="$(t Format):CB" "$(combo "${label[${saved_fmt:-${formats[0]}}]}" "${labels[@]}")")
-  [[ $kind == pdf ]] || fields+=(--field="$(t Quality):CB" "$(combo "${qualities[saved_q]}" "${qualities[@]}")")
-  [[ $kind == @(video|image) ]] && fields+=(--field="$(t "Max height"):CB" "$(combo "$saved_h" "$original" 1080 720 480)")
-  [[ $kind == @(video|audio) ]] && fields+=(--field="$(t Start) (0:15)" "" --field="$(t End) (1:30)" "")
-  [[ $kind == video ]] && fields+=(--field="$(t "Target size, MB")" "" --field="$(t "Use GPU"):CHK" "$saved_gpu")
-  [[ $kind == @(video|audio|image) ]] && fields+=(--field="$(t "Remove metadata"):CHK" "$saved_strip")
+  fields+=("$(t Format)" CB "$(combo "${label[${saved_fmt:-${formats[0]}}]}" "${labels[@]}")")
+  [[ $kind == pdf ]] || fields+=("$(t Quality)" CB "$(combo "${qualities[saved_q]}" "${qualities[@]}")")
+  [[ $kind == @(video|image) ]] && fields+=("$(t "Max height")" CB "$(combo "$saved_h" "$original" 1080 720 480)")
+  [[ $kind == @(video|audio) ]] && fields+=("$(t Start) (0:15)" TEXT "" "$(t End) (1:30)" TEXT "")
+  [[ $kind == video ]] && fields+=("$(t "Target size, MB")" TEXT "" "$(t "Use GPU")" CHK "$saved_gpu")
+  [[ $kind == @(video|audio|image) ]] && fields+=("$(t "Remove metadata")" CHK "$saved_strip")
 
-  answer=$(yad --form --title="$title" --window-icon=document-export --center --width=380 --separator='|' \
-    --text="$(t "Selected files"): $#" "${fields[@]}") || exit 0
+  answer=$("$ui_app" form "$title" "$subtitle" "$title" "${fields[@]}") || no_ui
+  [[ $answer ]] || exit 0
   case $kind in
     video) IFS='|' read -r f_fmt f_q f_h f_start f_end f_size f_gpu f_strip _ <<<"$answer" ;;
     audio) IFS='|' read -r f_fmt f_q f_start f_end f_strip _ <<<"$answer" ;;
@@ -95,8 +97,10 @@ to_us() {
   echo $(( ((10#$h * 60 + 10#$m) * 60 + 10#$s) * 1000000 + 10#${frac:0:6} ))
 }
 
+subtitle=${1##*/}
+subtitle=${subtitle//$'\n'/_}
+(( $# > 1 )) && subtitle="$(t "Selected files"): $#"
 if [[ $format == ask ]]; then
-  need yad
   ask "$@"
 elif [[ $format == 10mb && $kind == video ]]; then
   format=h264 height=720 size=10
@@ -138,7 +142,7 @@ stop_job() { kill -KILL -- "-$job" "$job"; wait "$job"; }
 trap '[[ $job ]] && stop_job 2>/dev/null; rm -rf "$tmp"; [[ $part ]] && rm -rf "$part"' EXIT
 trap 'exit 1' INT TERM
 
-exec 3> >(exec zenity --progress --percentage=0 --auto-close --width=420 --title="$title" --text="$(t Converting)")
+exec 3> >("$ui_app" progress "$(t Converting)" "$subtitle" "$(t Cancel)" >/dev/null 2>&1 || : >"$tmp/no_ui")
 ui=$!
 
 total=$# index=0 done_n=0 failed=()
@@ -151,8 +155,7 @@ show_progress() {
   fi
   pct=$(( clip_us > 0 ? ${us:-0} * pass_span / clip_us + pass_base : 0 ))
   (( pct > 99 )) && pct=99
-  # zenity may read these characters as markup or escapes
-  shown="$((index + 1)) $(t of) $total: ${name//[\\&<$'\n']/_}"
+  shown="$((index + 1)) $(t of) $total: ${name//$'\n'/_}"
   (( clip_us > 0 )) && shown+=" ($pct%)"
   pct=$(( (index * 100 + pct) / total ))
   [[ $shown == "$last_shown" ]] && return
@@ -167,7 +170,7 @@ run() {
   setsid "$@" </dev/null >"${sink:-/dev/null}" 2>"$tmp/log" 3>&- &
   job=$!
   while kill -0 "$job" 2>/dev/null; do
-    kill -0 "$ui" 2>/dev/null || { notify-send -a dolphin-convert "$title" "$(t Canceled). $(t Done): $done_n"; exit 1; }
+    kill -0 "$ui" 2>/dev/null || { [[ -e $tmp/no_ui ]] && no_ui; notify-send -i dolphin-convert -a dolphin-convert "$title" "$(t Canceled). $(t Done): $done_n"; exit 1; }
     show_progress 2>/dev/null
     sleep 0.2
   done
@@ -392,12 +395,12 @@ exec 3>&-
 
 summary="$(t Done): $done_n $(t of) $total"
 if [[ $last_out ]]; then
-  ( [[ $(timeout 600 notify-send -A "open=$(t "Open folder")" -a dolphin-convert "$title" "$summary") == open ]] &&
+  ( [[ $(timeout 600 notify-send -A "open=$(t "Open folder")" -i dolphin-convert -a dolphin-convert "$title" "$summary") == open ]] &&
     exec dolphin --select "$last_out" ) >/dev/null 2>&1 &
 else
-  notify-send -a dolphin-convert "$title" "$summary"
+  notify-send -i dolphin-convert -a dolphin-convert "$title" "$summary"
 fi
 if (( ${#failed[@]} )); then
-  kdialog --title "$title" --error "$(printf '%s\n' "$(t Failed):" "${failed[@]}")"
+  kdialog --icon dolphin-convert --title "$title" --error "$(printf '%s\n' "$(t Failed):" "${failed[@]}")"
   exit 1
 fi

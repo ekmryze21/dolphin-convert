@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
 MimeType=image/jpeg;image/png;image/webp;image/gif;image/bmp;image/tiff;image/avif;image/jxl;image/svg+xml;image/vnd.microsoft.icon;
-Actions=jpg;png;webp;avif;jxl;_SEPARATOR_;pdf;pdf-one;_SEPARATOR_;ask;
+Actions=_SEPARATOR_;jpg;png;webp;avif;jxl;_SEPARATOR_;pdf;pdf-one;_SEPARATOR_;ask;
 X-KDE-Priority=TopLevel
 X-KDE-Submenu=Convert to…
 X-KDE-Submenu[uk]=Конвертувати в…
@@ -11,6 +11,10 @@ X-KDE-Submenu[fr]=Convertir en…
 X-KDE-Submenu[pl]=Konwertuj na…
 X-KDE-Submenu[nl]=Converteren naar…
 X-KDE-Submenu[ca]=Converteix a…
+
+# Dolphin takes the submenu icon from the first entry and hides a leading separator
+[Desktop Action _SEPARATOR_]
+Icon=dolphin-convert-outline
 
 [Desktop Action jpg]
 Name=JPG

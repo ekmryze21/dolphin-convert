@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
 MimeType=application/vnd.oasis.opendocument.presentation;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.ms-powerpoint;
-Actions=pdf;pptx;odp;
+Actions=_SEPARATOR_;pdf;pptx;odp;
 X-KDE-Priority=TopLevel
 X-KDE-Submenu=Convert to…
 X-KDE-Submenu[uk]=Конвертувати в…
@@ -11,6 +11,10 @@ X-KDE-Submenu[fr]=Convertir en…
 X-KDE-Submenu[pl]=Konwertuj na…
 X-KDE-Submenu[nl]=Converteren naar…
 X-KDE-Submenu[ca]=Converteix a…
+
+# Dolphin takes the submenu icon from the first entry and hides a leading separator
+[Desktop Action _SEPARATOR_]
+Icon=dolphin-convert-outline
 
 [Desktop Action pdf]
 Name=PDF

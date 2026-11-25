@@ -10,8 +10,11 @@ cd "$work" || exit 1
 export HOME=$work/home PATH=$work/bin:$PATH LANGUAGE=en
 unset XDG_CONFIG_HOME
 stub() { printf '#!/bin/bash\n%s\n' "$2" >"bin/$1"; chmod +x "bin/$1"; }
-stub yad 'printf "%s\n" "$@" >"$HOME/yad"; echo "$ANSWER"'
-stub zenity 'cat >"$HOME/progress"'
+ui_stub() {
+  printf '#!/bin/bash\n[[ $1 == progress ]] && { %s; exit; }\nprintf "%%s\\n" "$@" >"$HOME/form"; echo "$ANSWER"\n' "$1" >"$HOME/.local/share/dolphin-convert/ui.py"
+  chmod +x "$HOME/.local/share/dolphin-convert/ui.py"
+}
+ui_stub 'cat >"$HOME/progress"'
 stub notify-send 'printf "%s\n" "$@" >"$HOME/notify"; [[ $1 == -A ]] && echo open'
 stub kdialog 'printf "%s\n" "$@" >"$HOME/error"'
 stub dolphin 'echo "$@" >"$HOME/dolphin"'
@@ -72,7 +75,7 @@ go video ask -dash.mkv
 check "trim" '[[ $rc == 0 && $(length ./-dash.mp4) == 2 ]]'
 ANSWER='GIF|Small file|480||||FALSE|' go video ask -dash.mkv
 ANSWER='GIF|Small file|480||||FALSE|' go video ask -dash.mkv
-check "remembers choice" 'grep -qx "MP4 (H.264)!MP4 (H.265)!MP4 (AV1)!WebM (VP9)!^GIF!.*" "$HOME/yad" && grep -qx "Original!1080!720!^480" "$HOME/yad"'
+check "remembers choice" 'grep -qx "MP4 (H.264)!MP4 (H.265)!MP4 (AV1)!WebM (VP9)!^GIF!.*" "$HOME/form" && grep -qx "Original!1080!720!^480" "$HOME/form"'
 for a in '1:99x||' '5|2|' '99||' '||0' '||abc'; do
   IFS='|' read -r s e z <<<"$a"
   ANSWER="MP4 (H.264)|High|Original|$s|$e|$z|FALSE|" go video ask відео.mkv
@@ -97,12 +100,15 @@ echo broken >broken.mkv
 go video h264 broken.mkv s.wav
 check "reports failure" '[[ $rc == 1 && ! -e broken.mp4 ]] && grep -q broken.mkv "$HOME/error"'
 
-stub zenity 'sleep 1'
+ui_stub 'exit 1'
+go video h265 big.mkv
+check "missing window libraries" '[[ $rc == 1 ]] && grep -q libadwaita "$HOME/error"'
+ui_stub 'sleep 1'
 ffmpeg -v error -f lavfi -i testsrc=d=120:s=1920x1080 -c:v mpeg4 long.mkv
 go video h265 long.mkv
 check "cancel" '[[ $rc == 1 && ! -e long.mp4 ]] && ! pgrep -f "ffmpeg.*$work/long.mkv" >/dev/null'
 stub soffice 'while (( $# > 1 )); do [[ $1 == --outdir ]] && d=$2; [[ $1 == --convert-to ]] && f=${2%%:*}; shift; done; mkdir -p "$d"; echo pdf >"$d/x.$f"'
-stub zenity 'cat >/dev/null'
+ui_stub 'cat >/dev/null'
 echo hi >w.docx; go office pdf w.docx
 check "office (stubbed)" '[[ $(<w.pdf) == pdf ]]'
 

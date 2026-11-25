@@ -16,6 +16,7 @@ tr=(
   ["no re-encoding"]="bez rekodowania"
   ["Converting"]="Konwertowanie"
   ["of"]="z"
+  ["Cancel"]="Anuluj"
   ["Canceled"]="Anulowano"
   ["Done"]="Gotowe"
   ["Failed"]="Niepowodzenie"
