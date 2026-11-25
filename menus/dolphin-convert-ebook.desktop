@@ -1,0 +1,37 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/epub+zip;application/x-mobipocket-ebook;application/vnd.amazon.mobi8-ebook;application/x-fictionbook+xml;
+Actions=_SEPARATOR_;epub;mobi;azw3;pdf;txt;
+X-KDE-Priority=TopLevel
+X-KDE-Submenu=Convert to…
+X-KDE-Submenu[uk]=Конвертувати в…
+X-KDE-Submenu[de]=Umwandeln in…
+X-KDE-Submenu[es]=Convertir a…
+X-KDE-Submenu[fr]=Convertir en…
+X-KDE-Submenu[pl]=Konwertuj na…
+X-KDE-Submenu[nl]=Converteren naar…
+X-KDE-Submenu[ca]=Converteix a…
+
+# Dolphin takes the submenu icon from the first entry and hides a leading separator
+[Desktop Action _SEPARATOR_]
+Icon=dolphin-convert-outline
+
+[Desktop Action epub]
+Name=EPUB
+Exec=dolphin-convert ebook epub %F
+
+[Desktop Action mobi]
+Name=MOBI
+Exec=dolphin-convert ebook mobi %F
+
+[Desktop Action azw3]
+Name=AZW3
+Exec=dolphin-convert ebook azw3 %F
+
+[Desktop Action pdf]
+Name=PDF
+Exec=dolphin-convert ebook pdf %F
+
+[Desktop Action txt]
+Name=TXT
+Exec=dolphin-convert ebook txt %F

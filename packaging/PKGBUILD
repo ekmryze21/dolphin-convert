@@ -1,0 +1,18 @@
+pkgname=dolphin-convert
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Convert files from the Dolphin context menu"
+arch=(any)
+url="https://github.com/ekmryze21/dolphin-convert"
+license=(MIT)
+depends=(dolphin kdialog libnotify ffmpeg imagemagick poppler python-gobject libadwaita)
+optdepends=('libreoffice-fresh: office documents' 'ghostscript: PDF compression' 'ocrmypdf: text recognition'
+  'calibre: e-books' 'libheif: HEIC photos')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=(SKIP)  # run updpkgsums after the release is published
+
+package() {
+  cd "$pkgname-$pkgver"
+  ./install.sh --package "$pkgdir"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

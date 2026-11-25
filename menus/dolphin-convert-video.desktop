@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
 MimeType=video/*;
-Actions=_SEPARATOR_;h264;vp9;gif;mp3;_SEPARATOR_;copy-mp4;10mb;_SEPARATOR_;ask;
+Actions=_SEPARATOR_;h264;vp9;gif;mp3;_SEPARATOR_;copy-mp4;10mb;_SEPARATOR_;mute;rotate-left;rotate-right;srt;_SEPARATOR_;ask;
 X-KDE-Priority=TopLevel
 X-KDE-Submenu=Convert to…
 X-KDE-Submenu[uk]=Конвертувати в…
@@ -60,6 +60,50 @@ Name[pl]=MP4, do 10 MB
 Name[nl]=MP4, tot 10 MB
 Name[ca]=MP4, fins a 10 MB
 Exec=dolphin-convert video 10mb %F
+
+[Desktop Action mute]
+Name=Remove sound
+Name[uk]=Прибрати звук
+Name[de]=Ton entfernen
+Name[es]=Quitar el sonido
+Name[fr]=Supprimer le son
+Name[pl]=Usuń dźwięk
+Name[nl]=Geluid verwijderen
+Name[ca]=Treu el so
+Exec=dolphin-convert video mute %F
+
+[Desktop Action rotate-left]
+Name=Rotate left
+Name[uk]=Повернути ліворуч
+Name[de]=Nach links drehen
+Name[es]=Girar a la izquierda
+Name[fr]=Pivoter à gauche
+Name[pl]=Obróć w lewo
+Name[nl]=Linksom draaien
+Name[ca]=Gira a l’esquerra
+Exec=dolphin-convert video rotate-left %F
+
+[Desktop Action rotate-right]
+Name=Rotate right
+Name[uk]=Повернути праворуч
+Name[de]=Nach rechts drehen
+Name[es]=Girar a la derecha
+Name[fr]=Pivoter à droite
+Name[pl]=Obróć w prawo
+Name[nl]=Rechtsom draaien
+Name[ca]=Gira a la dreta
+Exec=dolphin-convert video rotate-right %F
+
+[Desktop Action srt]
+Name=Extract subtitles (SRT)
+Name[uk]=Витягти субтитри (SRT)
+Name[de]=Untertitel extrahieren (SRT)
+Name[es]=Extraer subtítulos (SRT)
+Name[fr]=Extraire les sous-titres (SRT)
+Name[pl]=Wyodrębnij napisy (SRT)
+Name[nl]=Ondertitels extraheren (SRT)
+Name[ca]=Extreu els subtítols (SRT)
+Exec=dolphin-convert video srt %F
 
 [Desktop Action ask]
 Name=More options…

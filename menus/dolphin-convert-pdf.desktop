@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
 MimeType=application/pdf;
-Actions=_SEPARATOR_;png;jpg;txt;
+Actions=_SEPARATOR_;png;jpg;txt;_SEPARATOR_;merge;split;compress;ocr;
 X-KDE-Priority=TopLevel
 X-KDE-Submenu=Convert to…
 X-KDE-Submenu[uk]=Конвертувати в…
@@ -27,3 +27,47 @@ Exec=dolphin-convert pdf jpg %F
 [Desktop Action txt]
 Name=TXT
 Exec=dolphin-convert pdf txt %F
+
+[Desktop Action merge]
+Name=Merge into one PDF
+Name[uk]=Об’єднати в один PDF
+Name[de]=Zu einer PDF zusammenfügen
+Name[es]=Unir en un PDF
+Name[fr]=Fusionner en un PDF
+Name[pl]=Połącz w jeden PDF
+Name[nl]=Samenvoegen tot één PDF
+Name[ca]=Uneix en un PDF
+Exec=dolphin-convert pdf merge %F
+
+[Desktop Action split]
+Name=Split into pages
+Name[uk]=Розділити на сторінки
+Name[de]=In Seiten aufteilen
+Name[es]=Dividir en páginas
+Name[fr]=Séparer les pages
+Name[pl]=Podziel na strony
+Name[nl]=Splitsen in pagina’s
+Name[ca]=Divideix en pàgines
+Exec=dolphin-convert pdf split %F
+
+[Desktop Action compress]
+Name=Compress
+Name[uk]=Стиснути
+Name[de]=Komprimieren
+Name[es]=Comprimir
+Name[fr]=Compresser
+Name[pl]=Kompresuj
+Name[nl]=Comprimeren
+Name[ca]=Comprimeix
+Exec=dolphin-convert pdf compress %F
+
+[Desktop Action ocr]
+Name=Recognize text (OCR)
+Name[uk]=Розпізнати текст (OCR)
+Name[de]=Text erkennen (OCR)
+Name[es]=Reconocer texto (OCR)
+Name[fr]=Reconnaître le texte (OCR)
+Name[pl]=Rozpoznaj tekst (OCR)
+Name[nl]=Tekst herkennen (OCR)
+Name[ca]=Reconeix el text (OCR)
+Exec=dolphin-convert pdf ocr %F

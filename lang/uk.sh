@@ -31,4 +31,8 @@ tr=(
   ["one file"]="один файл"
   ["Remove metadata"]="Видалити метадані"
   ["Not installed"]="Не встановлено"
+  ["Select several files"]="Виберіть кілька файлів"
+  ["ffmpeg was built without an encoder"]="ffmpeg зібрано без кодувальника"
+  ["No subtitles"]="Немає субтитрів"
+  ["Already compressed"]="Файл уже стиснуто"
 )

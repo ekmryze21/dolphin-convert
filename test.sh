@@ -1,11 +1,12 @@
 #!/bin/bash
 # Runs real conversions in a temporary folder with stubbed dialogs
 cd "$(dirname "$0")" || exit 1
-app=$PWD/dolphin-convert
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/bin" "$work/home/.local/share/dolphin-convert" "$work/my.dir"
-cp -r lang "$work/home/.local/share/dolphin-convert/"
+app=$work/home/.local/bin/dolphin-convert
+mkdir -p "$work/bin" "$work/home/.local/bin" "$work/home/.local/share/dolphin-convert" "$work/my.dir"
+cp dolphin-convert "$app"
+cp -r lang VERSION "$work/home/.local/share/dolphin-convert/"
 cd "$work" || exit 1
 export HOME=$work/home PATH=$work/bin:$PATH LANGUAGE=en
 unset XDG_CONFIG_HOME
@@ -39,6 +40,19 @@ sha256sum -- "$v" my.dir/noext -dash.mkv відео.mkv .hidden s.wav ./i* p.avi
 
 base=${v%.mkv}
 for fmt in h264 h265 vp9 av1 gif mp3 copy-mp4 copy-mkv; do go video $fmt "$v"; check "video $fmt" '(( rc == 0 ))'; done
+mkdir acts
+printf '1\n00:00:00,000 --> 00:00:02,000\nhello\n' >s.srt
+ffmpeg -v error -i "$v" -i s.srt -map 0 -map 1 -c copy -c:s srt acts/a.mkv
+for fmt in mute rotate-left rotate-right srt; do go video $fmt acts/a.mkv; check "video $fmt" '(( rc == 0 ))'; done
+check "mute" '[[ -z $(codec "acts/a (1).mkv" a) && $(codec "acts/a (1).mkv" v) == h264 ]]'
+check "rotate" '[[ $(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 acts/a.mp4) == 202,302* ]]'
+check "subtitles" 'grep -q hello acts/a.srt'
+go video srt "$v"
+check "no subtitles" '[[ $rc == 1 ]] && grep -q "No subtitles" "$HOME/error"'
+stub ffmpeg 'echo " V..... mpeg4 "'
+go video h264 "$v"; rm bin/ffmpeg
+check "missing encoder" '[[ $rc == 1 ]] && grep -q libx264 "$HOME/error"'
+check "version" '[[ $("$app" --version) == $(<"$HOME/.local/share/dolphin-convert/VERSION") ]]'
 check "codecs" '[[ $(codec "$base.mp4" v) == h264 && $(codec "$base (1).mp4" v) == hevc && $(codec "$base.webm" v) == vp9 && $(codec "$base (2).mp4" v) == av1 && $(codec "$base (3).mp4" v) == h264 ]]'
 check "even size" '[[ $(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 "$base.mp4") == 302,202* ]]'
 go video mp3 my.dir/noext ./-dash.mkv -dash.mkv відео.mkv .hidden
@@ -48,6 +62,9 @@ check "notification name" 'grep -qx dolphin-convert "$HOME/notify"'
 check "per-file progress" 'grep -q "^# 5 of 5: .hidden" "$HOME/progress"'
 for fmt in mp3 m4a opus ogg flac wav; do go audio $fmt s.wav; check "audio $fmt" '(( rc == 0 ))'; done
 for fmt in jpg png webp avif jxl tiff gif bmp ico pdf; do go image $fmt ./i*.png p.avif; check "image $fmt" '[[ $rc == 0 && -s p.$fmt ]]'; done
+stub heif-dec 'cp p.png "$2"'
+echo heic >photo.heic
+if [[ $(magick -list format) != *" HEIC "* ]]; then go image jpg photo.heic; check "heic (stubbed)" '[[ $rc == 0 && -s photo.jpg ]]'; fi
 check "avif transparency" '[[ $(ffprobe -v error -show_entries stream=codec_name -of csv=p=0 "i [x]%d.avif" | grep -c av1) == 2 ]]'
 check "ico sizes" '[[ $(magick identify "i [x]%d.ico" | wc -l) == 5 ]]'
 mkdir merge; cp ./i*d.png merge/a.png; cp p.avif merge/b.avif
@@ -68,6 +85,27 @@ check "strip video" '[[ $rc == 0 ]] && ! ffprobe -v error -show_format -show_str
 rm -rf "$HOME/.config"
 check "image types" '[[ $(file -b --mime-type "i [x]%d.jpg") == image/jpeg && $(file -b --mime-type p.webp) == image/webp ]]'
 for fmt in png jpg txt; do go pdf $fmt doc.pdf; check "pdf $fmt" '(( rc == 0 ))'; done
+go pdf merge doc.pdf one.pdf
+check "merge pdf" '[[ $rc == 0 && $(pdfinfo "doc (1).pdf" | grep -c "^Pages: *3$") == 1 ]]'
+go pdf merge doc.pdf
+check "merge needs several" '[[ $rc == 1 ]] && grep -q "Select several" "$HOME/error"'
+go pdf split doc.pdf
+check "split pdf" '[[ $rc == 0 && $(ls "doc (2)" | wc -l) == 2 ]]'
+if command -v gs >/dev/null; then
+  magick -size 1500x1500 plasma: -quality 100 heavy.pdf; go pdf compress heavy.pdf
+  check "compress pdf" '[[ $rc == 0 && $(stat -c %s "heavy (1).pdf") -lt $(stat -c %s heavy.pdf) ]]'
+  stub gs 'for a; do [[ $a == -sOutputFile=* ]] && cat one.pdf doc.pdf >"${a#*=}"; done'
+  go pdf compress one.pdf; rm bin/gs
+  check "compress keeps small pdf" '[[ $rc == 1 && ! -e "one (1).pdf" ]]'
+fi
+stub tesseract 'echo eng; echo ukr'
+stub ocrmypdf 'echo "$@" >"$HOME/ocr"; cp "${@: -2:1}" "${@: -1}"'
+LANGUAGE=uk go pdf ocr one.pdf
+check "ocr (stubbed)" '[[ $rc == 0 && -s "one (1).pdf" ]] && grep -q -- "-l eng+ukr" "$HOME/ocr"'
+rm "one (1).pdf"
+stub ebook-convert 'echo book >"$2"'
+echo b >b.fb2; go ebook epub b.fb2
+check "ebook (stubbed)" '[[ $rc == 0 && -s b.epub ]]'
 check "pdf pages" '[[ $(ls doc | wc -l) == 2 && $(ls "doc (1)" | wc -l) == 2 ]]'
 
 ANSWER='MP4 (H.264)|High|Original|0:01|0:03||FALSE|'; export ANSWER
