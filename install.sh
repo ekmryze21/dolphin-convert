@@ -127,6 +127,8 @@ heic=$(package heic)
 if [[ $heic ]] && ! reads_heic; then
   echo "iPhone photos (HEIC) need:"
   read -ra packages <<<"$heic"
+  # Atomic images often lack RPM Fusion or pin their own libheif
+  if [[ -e /run/ostree-booted ]] && has brew; then get=(brew install) packages=(libheif); fi
   offer "${packages[@]}"
 fi
 
