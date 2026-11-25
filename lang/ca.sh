@@ -31,4 +31,8 @@ tr=(
   ["one file"]="un sol fitxer"
   ["Remove metadata"]="Suprimeix les metadades"
   ["Not installed"]="No instal·lat"
+  ["Select several files"]="Seleccioneu diversos fitxers"
+  ["ffmpeg was built without an encoder"]="ffmpeg s’ha compilat sense el codificador"
+  ["No subtitles"]="No hi ha subtítols"
+  ["Already compressed"]="Ja està comprimit"
 )

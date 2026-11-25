@@ -31,4 +31,8 @@ tr=(
   ["one file"]="eine Datei"
   ["Remove metadata"]="Metadaten entfernen"
   ["Not installed"]="Nicht installiert"
+  ["Select several files"]="Mehrere Dateien auswählen"
+  ["ffmpeg was built without an encoder"]="ffmpeg wurde ohne Encoder gebaut"
+  ["No subtitles"]="Keine Untertitel"
+  ["Already compressed"]="Bereits komprimiert"
 )

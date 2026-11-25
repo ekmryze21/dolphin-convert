@@ -7,16 +7,18 @@ declare -A tr
 locale=${LANGUAGE%%:*}
 locale=${locale:-${LC_ALL:-${LC_MESSAGES:-$LANG}}}
 locale=${locale%%[_.@]*}
-lang_file=~/.local/share/dolphin-convert/lang/$locale.sh
+share=${0%/*}/../share/dolphin-convert  # works in ~/.local and in /usr
+lang_file=$share/lang/$locale.sh
 [[ $locale =~ ^[a-z]{2,3}$ && -r $lang_file ]] && . "$lang_file"
 t() { printf '%s' "${tr[$1]:-$1}"; }
 
 title=$(t Convert)
-ui_app=~/.local/share/dolphin-convert/ui.py
-usage() { echo "Usage: dolphin-convert video|audio|image|pdf|office FORMAT|ask FILE..." >&2; exit 2; }
+ui_app=$share/ui.py
+usage() { echo "Usage: dolphin-convert video|audio|image|pdf|office|ebook FORMAT|ask FILE..." >&2; exit 2; }
 die() { kdialog --icon dolphin-convert --title "$title" --error "$(t "$1")${2:+: $2}"; exit 1; }
 no_ui() { die "Not installed" "python3-gobject, libadwaita"; }
 need() { local c; for c; do command -v "$c" >/dev/null || die "Not installed" "$c"; done; }
+[[ $1 == --version ]] && { cat -- "$share/VERSION"; exit; }
 (( $# >= 3 )) || usage
 kind=$1 format=$2
 shift 2
@@ -26,14 +28,17 @@ declare -A label=(
   [copy-mp4]="MP4 ($(t "no re-encoding"))" [copy-mkv]="MKV ($(t "no re-encoding"))"
   [mp3]=MP3 [m4a]="M4A (AAC)" [opus]=Opus [ogg]="OGG (Vorbis)" [flac]=FLAC [wav]=WAV
   [jpg]=JPG [png]=PNG [webp]=WebP [avif]=AVIF [jxl]=JXL [tiff]=TIFF [bmp]=BMP [ico]=ICO
-  [pdf]=PDF [pdf-one]="PDF ($(t "one file"))" [txt]=TXT
+  [epub]=EPUB [mobi]=MOBI [azw3]=AZW3 [pdf]=PDF [pdf-one]="PDF ($(t "one file"))" [txt]=TXT
 )
+actions=()  # menu-only, not offered in the form
 case $kind in
-  video) formats=(h264 h265 av1 vp9 gif mp3 copy-mp4 copy-mkv); label[mp3]="MP3 ($(t "audio only"))" ;;
+  video) formats=(h264 h265 av1 vp9 gif mp3 copy-mp4 copy-mkv); label[mp3]="MP3 ($(t "audio only"))"
+    actions=(mute rotate-left rotate-right srt) ;;
   audio) formats=(mp3 m4a opus ogg flac wav) ;;
   image) formats=(jpg png webp avif jxl tiff gif bmp ico pdf pdf-one) ;;
-  pdf) formats=(png jpg txt) ;;
+  pdf) formats=(png jpg txt); actions=(merge split compress ocr) ;;
   office) formats=(pdf docx odt xlsx ods csv pptx odp) ;;
+  ebook) formats=(epub mobi azw3 pdf txt) ;;
   *) usage ;;
 esac
 
@@ -105,14 +110,30 @@ if [[ $format == ask ]]; then
 elif [[ $format == 10mb && $kind == video ]]; then
   format=h264 height=720 size=10
 fi
-[[ " ${formats[*]} " == *" $format "* ]] || usage
+[[ " ${formats[*]} ${actions[*]} " == *" $format "* ]] || usage
 
 case $kind in
   video|audio) need ffmpeg ffprobe ;;
   image) need magick; [[ $format == avif ]] && need ffmpeg; [[ $format == pdf-one ]] && need pdfunite ;;
-  pdf) if [[ $format == txt ]]; then need pdftotext; else need pdftoppm; fi ;;
+  pdf)
+    case $format in
+      txt) need pdftotext ;;
+      merge) need pdfunite; (( $# > 1 )) || die "Select several files" ;;
+      split) need pdfseparate ;;
+      compress) need gs ;;
+      ocr) need ocrmypdf tesseract ;;
+      *) need pdftoppm ;;
+    esac ;;
   office) need soffice ;;
+  ebook) need ebook-convert ;;
 esac
+
+# Some distributions ship ffmpeg without the patented encoders
+declare -A encoder=([h264]=libx264 [h265]=libx265 [av1]=libsvtav1 [vp9]=libvpx-vp9 [mp3]=libmp3lame [opus]=libopus
+  [ogg]=libvorbis [avif]=libaom-av1 [rotate-left]=libx264 [rotate-right]=libx264)
+if [[ $kind == @(video|audio|image) && ${encoder[$format]} ]]; then
+  [[ $(ffmpeg -hide_banner -encoders 2>/dev/null) == *" ${encoder[$format]} "* ]] || die "ffmpeg was built without an encoder" "${encoder[$format]}"
+fi
 
 start_us=0 end_us=0
 if [[ $start ]]; then start_us=$(to_us "$start") || die "Invalid time"; fi
@@ -126,15 +147,16 @@ if [[ $size ]]; then
 fi
 
 case $format in
-  h264|h265|av1|copy-mp4) ext=mp4 ;;
+  h264|h265|av1|copy-mp4|rotate-*) ext=mp4 ;;
   vp9) ext=webm ;;
   copy-mkv) ext=mkv ;;
-  pdf-one) ext=pdf ;;
+  pdf-one|merge|split|compress|ocr) ext=pdf ;;
   *) ext=$format ;;
 esac
 pages= merge=
 [[ $format == pdf-one ]] && merge=1 format=pdf
-[[ $kind == pdf && $format != txt ]] && pages=1
+[[ $format == merge ]] && merge=1
+[[ $kind == pdf && $format == @(png|jpg|split) ]] && pages=1
 
 tmp=$(mktemp -d) || exit 1
 job= part=
@@ -270,6 +292,12 @@ convert_media() {
       args=(-vf "$vf" -c:v libvpx-vp9 -crf "${crf[q]}" -b:v 0 -row-mt 1 -cpu-used 4 -pix_fmt yuv420p -c:a libopus) ;;
     gif) fps=(20 15 10)
       args=(-vf "$vf,fps=${fps[q]},split[a][b];[a]palettegen[p];[b][p]paletteuse") ;;
+    rotate-left) args=(-vf "transpose=cclock,$vf" -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
+    rotate-right) args=(-vf "transpose=clock,$vf" -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
+    mute) args=(-map 0:V -map "0:s?" -c copy) ;;
+    srt) # shortcut: only the first track, extend when someone needs the others
+      [[ $(ffprobe -v error -select_streams s -show_entries stream=index -of csv=p=0 -i "$f") ]] || { err="No subtitles"; return 1; }
+      args=(-map 0:s:0 -c:s srt) ;;
     copy-mp4) args=(-map 0:V -map "0:a?" -c copy -movflags +faststart) ;;
     copy-mkv) args=(-map 0:V -map "0:a?" -map "0:s?" -map "0:t?" -c copy) ;;
     mp3) rate=(256k 192k 128k); args=(-vn -c:a libmp3lame -b:a "${rate[q]}") ;;
@@ -301,6 +329,12 @@ convert_image() {
     ffmpeg_run -i "$f" -frames:v 1 "$tmp/decoded.png" || return 1
     src=$tmp/decoded.png
   fi
+  if [[ $src == *.hei[cf] && $(magick -list format) != *" HEIC "* ]]; then
+    local heif
+    heif=$(command -v heif-dec || command -v heif-convert) || { err="$(t "Not installed"): libheif-tools"; return 1; }
+    run "$heif" "$src" "$tmp/decoded.png" || return 1
+    src=$tmp/decoded.png
+  fi
   (( height > 0 )) && args+=(-resize "x$height>")
   # The color profile stays, or wide-gamut photos change color
   [[ $strip == TRUE ]] && args+=(+profile '!icc,*' +set comment)
@@ -320,13 +354,31 @@ convert_image() {
 
 convert_pdf() {
   local flag=-png
-  [[ $format == txt ]] && { run pdftotext -layout "$f" "$part"; return; }
+  local lang
+  case $format in
+    txt) run pdftotext -layout "$f" "$part"; return ;;
+    merge) cp -- "$f" "$part"; return ;;
+    split) mkdir "$part" && run pdfseparate "$f" "$part/page-%03d.pdf"; return ;;
+    compress)
+      run gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -sOutputFile="${part//%/%%}" -f "$f" || return 1
+      (( $(stat -c %s -- "$part") < $(stat -Lc %s -- "$f") )) && return
+      err="Already compressed"
+      return 1 ;;
+    ocr)
+      declare -A ocr_lang=([uk]=ukr [de]=deu [es]=spa [fr]=fra [pl]=pol [nl]=nld [ca]=cat)
+      lang=eng
+      [[ ${ocr_lang[$locale]} ]] && tesseract --list-langs 2>/dev/null | grep -qx "${ocr_lang[$locale]}" && lang+=+${ocr_lang[$locale]}
+      run ocrmypdf --skip-text -l "$lang" "$f" "$part"
+      return ;;
+  esac
   [[ $format == jpg ]] && flag=-jpeg
   mkdir "$part" && run pdftoppm "$flag" -r 150 "$f" "$part/page" || return 1
   local files=("$part"/*)
   (( ${#files[@]} == 1 )) || return 0
   mv -- "${files[0]}" "$tmp/page" && rmdir "$part" && mv -T -- "$tmp/page" "$part" && pick_out ".$ext"
 }
+
+convert_ebook() { run ebook-convert "$f" "$part"; }
 
 # soffice names its own output, so use a scratch folder and a private profile
 convert_office() {
@@ -352,6 +404,10 @@ for f in "$@"; do
   stem=${name%.*}
   base=${f%/*}/${stem:-$name}
   [[ $merge && $index == 0 ]] && merge_base=$base
+  if [[ $format == mute ]]; then
+    ext=${name##*.} ext=${ext,,}
+    [[ $name == *.* && $ext == @(mp4|mov|mkv|webm) ]] || ext=mkv
+  fi
   suffix=.$ext
   [[ $pages ]] && suffix=
   pick_out "$suffix"
