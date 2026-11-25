@@ -6,8 +6,6 @@ Adds a **Convert to…** submenu to the Dolphin context menu for video, audio, i
 
 No uploads, no ads, no file limits: files are converted on your own computer.
 
-On Windows? See [explorer-convert](https://github.com/ekmryze21/explorer-convert).
-
 ![Context menu and options window for a video](screenshot.png)
 
 | Files | Formats |
@@ -46,12 +44,10 @@ Stock Fedora ships a reduced ffmpeg. The installer offers to enable [RPM Fusion]
 ## Install
 
 ```bash
-git clone https://github.com/ekmryze21/dolphin-convert.git
-cd dolphin-convert
-./install.sh
+git clone https://github.com/ekmryze21/dolphin-convert.git && ./dolphin-convert/install.sh
 ```
 
-The installer lists missing packages and, on the Fedora, Arch, Debian and openSUSE families, offers to install them. Menus of missing optional tools stay hidden: install the tool and run `./install.sh` again. If the menu doesn’t show up, restart Dolphin.
+The installer lists missing packages and, on the Fedora, Arch, Debian and openSUSE families, offers to install them. Menus of missing optional tools stay hidden: install the tool and run `./install.sh` again from the `dolphin-convert` folder. Restart Dolphin for menu to show up.
 
 ## Notes
 
@@ -71,6 +67,10 @@ The installer lists missing packages and, on the Fedora, Arch, Debian and openSU
 `./test.sh` runs real conversions in a temporary folder with stubbed dialogs. To add a language, copy a file in `lang/` and add its names to `menus/`.
 
 RPM and Arch package files are in `packaging/`.
+
+## Thanks
+
+Dutch translation: morxd. Spanish and Catalan: treshhyk.
 
 ## License
 
