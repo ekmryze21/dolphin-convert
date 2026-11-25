@@ -62,6 +62,30 @@ package() {
   echo "${row[family-1]}"
 }
 
+# lacking_encoders: sets lacking to the encoders ffmpeg does not have
+lacking_encoders() {
+  local encoders e
+  lacking=
+  encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null) || true
+  for e in libx264 libx265 libsvtav1 libaom-av1 libvpx-vp9 libopus libvorbis libmp3lame; do
+    [[ $encoders == *" $e "* ]] || lacking+=" $e"
+  done
+}
+lacking_encoders
+# Stock Fedora has a reduced ffmpeg, the full one is in RPM Fusion. Runs before the other packages, which include ffmpeg.
+if [[ $lacking && $ID == fedora && ! -e /run/ostree-booted ]]; then
+  echo "ffmpeg is missing or has no$lacking"
+  fusion="https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm"
+  echo "  sudo dnf install $fusion"
+  echo "  sudo dnf install --allowerasing ffmpeg"
+  if [[ -t 0 ]]; then
+    read -rp "Enable RPM Fusion and install the full ffmpeg now? [y/N] " answer || true
+    if [[ $answer == [yY]* ]]; then
+      { sudo dnf install "$fusion" && sudo dnf install --allowerasing ffmpeg; } || echo "The full ffmpeg was not installed."
+    fi
+  fi
+fi
+
 missing=() packages=()
 for c in ffmpeg ffprobe kdialog notify-send magick pdftoppm pdftotext pdfunite pdfseparate; do
   has "$c" || missing+=("$c")
@@ -89,10 +113,7 @@ if (( ${#missing[@]} )); then
 fi
 
 if has ffmpeg; then
-  encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null) lacking=
-  for e in libx264 libx265 libsvtav1 libaom-av1 libvpx-vp9 libopus libvorbis libmp3lame; do
-    [[ $encoders == *" $e "* ]] || lacking+=" $e"
-  done
+  lacking_encoders
   if [[ $lacking ]]; then
     echo "Your ffmpeg has no$lacking; those conversions will not work."
     if [[ $family == 1 ]]; then echo "  Install the full ffmpeg: https://rpmfusion.org/Configuration"; fi

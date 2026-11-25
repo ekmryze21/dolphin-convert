@@ -9,5 +9,6 @@
 - E-books: EPUB, MOBI, AZW3, PDF, TXT
 - Images: HEIC and camera RAW files as a source
 - The installer offers to install missing packages and hides menus of missing tools
+- The installer offers the full ffmpeg from RPM Fusion on Fedora
 - A clear message when ffmpeg lacks an encoder
 - RPM and Arch package files
