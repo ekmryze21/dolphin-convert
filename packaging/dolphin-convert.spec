@@ -10,8 +10,8 @@ BuildArch:      noarch
 Requires:       dolphin kdialog libnotify ImageMagick poppler-utils
 Requires:       /usr/bin/ffmpeg /usr/bin/ffprobe
 Requires:       python3-gobject libadwaita
-Recommends:     ghostscript
-Suggests:       libreoffice ocrmypdf calibre libheif-tools
+Recommends:     ghostscript libheif-tools libheif-freeworld
+Suggests:       libreoffice ocrmypdf calibre
 
 %description
 Adds a "Convert to" submenu to the Dolphin context menu for video, audio,

@@ -57,8 +57,18 @@ package() {
     gs) row=(ghostscript ghostscript ghostscript ghostscript) ;;
     ocrmypdf) row=(ocrmypdf ocrmypdf ocrmypdf ocrmypdf) ;;
     ebook-convert) row=(calibre calibre calibre calibre) ;;
+    heic) row=("libheif-tools libheif-freeworld" libheif "" "") ;;
   esac
-  echo "${row[family-1]}"
+  if [[ $family ]]; then echo "${row[family-1]}"; fi
+}
+
+# offer PACKAGE...: show the command and ask to run it
+offer() {
+  local answer=
+  echo "  ${get[*]} $*"
+  if [[ ! -t 0 ]]; then return; fi
+  read -rp "Run this command now? [y/N] " answer || true
+  if [[ $answer == [yY]* ]]; then "${get[@]}" "$@" || echo "Some packages were not installed."; fi
 }
 
 # lacking_encoders: sets lacking to the encoders ffmpeg does not have
@@ -85,6 +95,16 @@ if [[ $lacking && $ID == fedora && ! -e /run/ostree-booted ]]; then
   fi
 fi
 
+if [[ -e /run/ostree-booted ]]; then get=(rpm-ostree install)
+else
+  case $family in
+    1) get=(sudo dnf install) ;;
+    2) get=(sudo pacman -S --needed) ;;
+    3) get=(sudo apt install) ;;
+    4) get=(sudo zypper install) ;;
+  esac
+fi
+
 missing=() packages=()
 for c in ffmpeg ffprobe kdialog notify-send magick pdftoppm pdftotext pdfunite pdfseparate; do
   has "$c" || missing+=("$c")
@@ -93,22 +113,21 @@ done
 if (( ${#missing[@]} )); then
   echo "Missing: ${missing[*]/windows/PyGObject and libadwaita}"
   if [[ $family ]]; then
-    if [[ -e /run/ostree-booted ]]; then get=(rpm-ostree install)
-    else
-      case $family in
-        1) get=(sudo dnf install) ;;
-        2) get=(sudo pacman -S --needed) ;;
-        3) get=(sudo apt install) ;;
-        4) get=(sudo zypper install) ;;
-      esac
-    fi
     read -ra packages <<<"$(for c in "${missing[@]}"; do package "$c"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-    echo "  ${get[*]} ${packages[*]}"
-    if [[ -t 0 ]]; then
-      read -rp "Run this command now? [y/N] " answer || true
-      if [[ $answer == [yY]* ]]; then "${get[@]}" "${packages[@]}" || echo "Some packages were not installed."; fi
-    fi
+    offer "${packages[@]}"
   fi
+fi
+
+# ImageMagick reads HEIC itself on most distributions; on Fedora it is heif-dec with a decoder from RPM Fusion
+reads_heic() {
+  [[ $(magick -list format 2>/dev/null) == *" HEIC "* ]] ||
+    heif-dec --list-decoders 2>/dev/null | grep -A1 '^HEIC decoders' | grep -q '^- '
+}
+heic=$(package heic)
+if [[ $heic ]] && ! reads_heic; then
+  echo "iPhone photos (HEIC) need:"
+  read -ra packages <<<"$heic"
+  offer "${packages[@]}"
 fi
 
 if has ffmpeg; then

@@ -37,7 +37,7 @@ Optional:
 - Ghostscript (`gs`) for PDF compression
 - `ocrmypdf` and Tesseract language data for text recognition
 - Calibre (`ebook-convert`) for e-books; the Flatpak version is not supported
-- `libheif-tools` for HEIC, if ImageMagick was built without it. HEIC also needs an HEVC decoder (`libheif-freeworld` from RPM Fusion on Fedora)
+- `libheif-tools` for HEIC, if ImageMagick was built without it. HEIC also needs an HEVC decoder (`libheif-freeworld` from RPM Fusion on Fedora). The installer offers these
 
 Stock Fedora ships a reduced ffmpeg. The installer offers to enable [RPM Fusion](https://rpmfusion.org/Configuration) and install the full `ffmpeg` package from there; on Atomic desktops do it yourself.
 
