@@ -13,7 +13,6 @@ copy_files() {
   install -Dm755 -t "$1/share/dolphin-convert" ui.py
   install -Dm644 -t "$1/share/applications" dolphin-convert.desktop
   install -Dm644 -t "$icons/scalable/apps" icons/dolphin-convert.svg icons/dolphin-convert-outline.svg
-  install -Dm644 -t "$icons/symbolic/apps" icons/dolphin-convert-symbolic.svg
   for s in 16x16 22x22; do
     install -Dm644 icons/dolphin-convert-small.svg "$icons/$s/apps/dolphin-convert.svg"
   done
@@ -30,7 +29,7 @@ menu=$prefix/share/kio/servicemenus
 if [[ $1 == --uninstall ]]; then
   rm -f ~/.local/bin/dolphin-convert ~/.local/share/applications/dolphin-convert.desktop
   rm -f "$menu"/dolphin-convert-{video,audio,image,pdf,office,spreadsheet,presentation,ebook}.desktop
-  rm -f ~/.local/share/icons/hicolor/{scalable,symbolic,16x16,22x22}/apps/dolphin-convert{,-outline,-symbolic}.svg
+  rm -f ~/.local/share/icons/hicolor/{scalable,16x16,22x22}/apps/dolphin-convert{,-outline}.svg
   rm -rf ~/.local/share/dolphin-convert ~/.config/dolphin-convert
   kbuildsycoca6
   exit
