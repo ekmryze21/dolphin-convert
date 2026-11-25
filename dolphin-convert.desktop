@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=dolphin-convert
+Icon=dolphin-convert
+Exec=dolphin-convert
+NoDisplay=true

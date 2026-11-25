@@ -16,6 +16,7 @@ tr=(
   ["no re-encoding"]="sense recodificar"
   ["Converting"]="S'està convertint"
   ["of"]="de"
+  ["Cancel"]="Cancel·la"
   ["Canceled"]="Cancel·lat"
   ["Done"]="Fet"
   ["Failed"]="Han fallat"

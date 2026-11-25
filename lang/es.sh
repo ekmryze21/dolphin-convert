@@ -16,6 +16,7 @@ tr=(
   ["no re-encoding"]="sin recodificar"
   ["Converting"]="Convirtiendo"
   ["of"]="de"
+  ["Cancel"]="Cancelar"
   ["Canceled"]="Cancelado"
   ["Done"]="Listo"
   ["Failed"]="Error"
