@@ -295,7 +295,7 @@ convert_media() {
     rotate-left) args=(-vf "transpose=cclock,$vf" -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
     rotate-right) args=(-vf "transpose=clock,$vf" -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -movflags +faststart) ;;
     mute) args=(-map 0:V -map "0:s?" -c copy) ;;
-    srt) # shortcut: only the first track, extend when someone needs the others
+    srt) # first track only
       [[ $(ffprobe -v error -select_streams s -show_entries stream=index -of csv=p=0 -i "$f") ]] || { err="No subtitles"; return 1; }
       args=(-map 0:s:0 -c:s srt) ;;
     copy-mp4) args=(-map 0:V -map "0:a?" -c copy -movflags +faststart) ;;
